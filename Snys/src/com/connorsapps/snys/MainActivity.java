@@ -1,0 +1,155 @@
+package com.connorsapps.snys;
+
+import com.connorsapps.snys.SnysContract.Account;
+
+import android.content.ContentValues;
+import android.database.sqlite.SQLiteDatabase;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
+import android.view.Menu;
+import android.view.MenuItem;
+
+
+public class MainActivity extends ActionBarActivity 
+{
+	private NetworkManager netMan;
+	private SQLiteDatabase db;
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState)
+	{
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		
+		this.netMan = new NetworkManager();
+		
+		//Open database in background
+		SnysDbHelper helper = new SnysDbHelper(this.getApplicationContext());
+		OpenDbTask opener = new OpenDbTask(this);
+		opener.execute(helper);
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu)
+	{
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) 
+	{
+		// Handle action bar item clicks here. The action bar will
+		// automatically handle clicks on the Home/Up button, so long
+		// as you specify a parent activity in AndroidManifest.xml.
+		int id = item.getItemId();
+		if (id == R.id.action_logout) 
+		{
+			logout();
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	public void logout()
+	{
+		//TODO move to background?
+		db.delete(Account.TABLE_NAME, null, null);
+		tryLogin();
+	}
+
+	/**
+	 * Callback method for database opened
+	 * @param db
+	 */
+	public void onDatabaseOpened(SQLiteDatabase db)
+	{
+		//Set database
+		this.db = db;
+		
+		tryLogin();
+	}
+	
+	/**
+	 * Try to log in with given credentials
+	 */
+	public void tryLogin()
+	{
+		//Start the login task
+		LoginTask login = new LoginTask(this);
+		login.execute();
+	}
+	
+	/**
+	 * Callback method for missing save data
+	 */
+	public void onNoSave()
+	{
+		LoginDialogFragment frag = new LoginDialogFragment(this, "Please log in.");
+		frag.show(getSupportFragmentManager(), "LoginDialog");
+	}
+	
+	/**
+	 * Callback method for invalid save data
+	 */
+	public void onInvalidSave()
+	{
+		LoginDialogFragment frag = new LoginDialogFragment(this, "Bad credentials. Please try again.");
+		frag.show(getSupportFragmentManager(), "LoginDialog");
+	}
+	
+	/**
+	 * Callback method for successful login
+	 */
+	public void onSuccessfulLogin()
+	{
+		//TODO Pat self on back
+	}
+	
+	/**
+	 * Callback method for dialog login
+	 * @param email
+	 * @param password
+	 */
+	public void onUpdateCredentials(final String email, final String password)
+	{
+		//Start and update database task with the new credentials
+		new AsyncTask<Boolean, Boolean, Boolean>()
+		{
+
+			@Override
+			protected Boolean doInBackground(Boolean... arg0)
+			{
+				//Update credentials in database
+				SQLiteDatabase db = MainActivity.this.getDatabase();
+				
+				//Values to insert
+				ContentValues values = new ContentValues();
+				values.put(Account._ID, 1);
+				values.put(Account.COLUMN_EMAIL, email);
+				values.put(Account.COLUMN_PASS, password);
+				
+				//Run insert
+				db.insert(Account.TABLE_NAME, null, values);
+				
+				//Start a new login task
+				LoginTask task = new LoginTask(MainActivity.this);
+				task.execute();
+				
+				return true;
+			}
+		}.execute();
+	}
+
+	public NetworkManager getNetworkManager()
+	{
+		return netMan;
+	}
+	
+	public SQLiteDatabase getDatabase()
+	{
+		return db;
+	}
+}
