@@ -59,6 +59,8 @@ public class NetworkManager
 	{
 		URL url = new URL(SERVER + endpoint);
 		
+//		Log.d("devBug", "Posting to " + url.toString() + " with params " + params);
+		
 		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setRequestMethod("POST");
 		con.setDoOutput(true);
@@ -69,6 +71,10 @@ public class NetworkManager
 		DataOutputStream out = new DataOutputStream(con.getOutputStream());
 		out.writeBytes(params);
 		out.close();
+
+//		int respCode = con.getResponseCode();
+//		
+//		Log.d("devBug", "Response code was " + respCode);
 		
 		return readInputStream(con.getInputStream());
 	}
@@ -118,7 +124,7 @@ public class NetworkManager
 	public Credentials register(String email, String pass) throws IOException, SnysException
 	{
 		Credentials nCreds = new Credentials(email, pass);
-		String r = this.doGet("/register", nCreds.toString());
+		String r = this.doPost("/register", nCreds.toString());
 		GenericResponse resp = gson.fromJson(r, GenericResponse.class);
 		
 		if (!resp.getError().equals(""))
@@ -151,7 +157,7 @@ public class NetworkManager
 	{
 		String strInfo = this.doGet("/info", this.credentials.toString());		
 		
-		Log.d("devBug", strInfo);
+//		Log.d("devBug", strInfo);
 		
 		Information info = new Information();
 		
@@ -599,7 +605,7 @@ public class NetworkManager
 		
 		public String toString()
 		{
-			return "email=" + email + "&pass=" + pass;
+			return "email=" + urlEncode(email) + "&pass=" + urlEncode(pass);
 		}
 	}
 	
@@ -619,7 +625,7 @@ public class NetworkManager
 		
 		public String toString()
 		{
-			return "GenericResponse {error = \"" + urlEncode(error) + "\", response = \"" + urlEncode(response) + "\"}";
+			return "GenericResponse {error = \"" + error + "\", response = \"" + response + "\"}";
 		}
 	}
 	

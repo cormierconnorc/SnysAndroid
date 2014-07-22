@@ -13,6 +13,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
 
+import com.connorsapps.snys.NetworkManager.Credentials;
 import com.connorsapps.snys.SnysContract.Account;
 
 
@@ -131,12 +132,59 @@ public class MainActivity extends ActionBarActivity
 			{
 				try
 				{
-					Log.d("devBug", netMan.getInfo().toString());
-					Log.d("devBug", Arrays.toString(netMan.getNotifications()));
-					Log.d("devBug", Arrays.toString(netMan.getGroups()));
-					Log.d("devBug", Arrays.toString(netMan.getInvitations()));
+					//Ensure that user has been deleted (only works if last run was successful)
+					netMan.setCredentials(new NetworkManager.Credentials("ccc9ww@virginia.edu", "passy"));
+					netMan.deleteUser();
+					
+					//Big test to see which fail
+					NetworkManager.Credentials streetCred = netMan.register("ccc9ww@virginia.edu", "pass");
+					netMan.setCredentials(streetCred);
+					
+					Log.d("devBug", "Account valid: " + netMan.checkValid());
+					
+					Group mine = netMan.createGroup("Hello World!");
+					Log.d("devBug", "Created group: " + mine);
+					
+					netMan.updateUser(null, "passy");
+					streetCred.setPass("passy");
+					
+					netMan.inviteUser(mine.getId(), streetCred.getEmail(), "Admin");
+					
+					netMan.deleteGroup(mine.getId());
+					
+					Group nGroup = netMan.createGroup("Test 2!!!");
+					
+					long refTime = System.currentTimeMillis() + 10 * 60 * 1000;
+					//Convert to seconds
+					refTime /= 1000;
+					
+					//Create and handle a note separately
+					Notification note = netMan.createNote(nGroup.getId(), "This is an unhandled note (prior to next op, time)", refTime);
+					Notification handled = netMan.handleNote(note.getId(), "Alarm", refTime);
+					Log.d("devBug", "Handled: " + handled);
+					
+					//All together now!
+					handled = netMan.createAndHandleNote(nGroup.getId(), "This is a handled note!", refTime, "Hide", 0);
+					Log.d("devBug", "Combined handled: " + handled);
+					
+					//Change note text
+					Notification edited = netMan.editNote(handled.getGid(), handled.getId(), "I'm edited!", null);
+					Log.d("devBug", "Edited: " + edited);
+					
+					//Delete that last note!
+					netMan.deleteNote(edited.getGid(), edited.getId());
+					
+					//Get resulting information
+					Log.d("devBug", "Info: " + netMan.getInfo().toString());
+					Log.d("devBug", "Notifications: " + Arrays.toString(netMan.getNotifications()));
+					Log.d("devBug", "Groups: " + Arrays.toString(netMan.getGroups()));
+					Log.d("devBug", "Invitations: " + Arrays.toString(netMan.getInvitations()));
 				} 
 				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+				catch (SnysException e)
 				{
 					e.printStackTrace();
 				}
