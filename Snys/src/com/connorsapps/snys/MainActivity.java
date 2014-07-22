@@ -1,14 +1,19 @@
 package com.connorsapps.snys;
 
-import com.connorsapps.snys.SnysContract.Account;
+import java.io.IOException;
+import java.util.Arrays;
 
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.Window;
+
+import com.connorsapps.snys.SnysContract.Account;
 
 
 public class MainActivity extends ActionBarActivity 
@@ -19,7 +24,10 @@ public class MainActivity extends ActionBarActivity
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
-		super.onCreate(savedInstanceState);
+		//Progress
+		this.requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+		
+		super.onCreate(savedInstanceState);		
 		setContentView(R.layout.activity_main);
 		
 		this.netMan = new NetworkManager();
@@ -57,6 +65,7 @@ public class MainActivity extends ActionBarActivity
 	{
 		//TODO move to background?
 		db.delete(Account.TABLE_NAME, null, null);
+		this.netMan.setCredentials(null);
 		tryLogin();
 	}
 
@@ -92,6 +101,17 @@ public class MainActivity extends ActionBarActivity
 	}
 	
 	/**
+	 * Callback for when server couldn't be reached.
+	 */
+	public void onNoConnection()
+	{
+		new GenericDialogFragment("Couldn't connect!",
+				"This could be a connection or server issue. You can still access saved data!",
+				android.R.drawable.ic_dialog_alert,
+				"Damn it").show(getSupportFragmentManager(), "DamnFragment");
+	}
+	
+	/**
 	 * Callback method for invalid save data
 	 */
 	public void onInvalidSave()
@@ -105,7 +125,24 @@ public class MainActivity extends ActionBarActivity
 	 */
 	public void onSuccessfulLogin()
 	{
-		//TODO Pat self on back
+		//Run tests, for now
+		new Thread(new Runnable() {
+			public void run()
+			{
+				try
+				{
+					Log.d("devBug", netMan.getInfo().toString());
+					Log.d("devBug", Arrays.toString(netMan.getNotifications()));
+					Log.d("devBug", Arrays.toString(netMan.getGroups()));
+					Log.d("devBug", Arrays.toString(netMan.getInvitations()));
+				} 
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}).start();
+		
 	}
 	
 	/**
@@ -116,15 +153,14 @@ public class MainActivity extends ActionBarActivity
 	public void onUpdateCredentials(final String email, final String password)
 	{
 		//Start and update database task with the new credentials
-		new AsyncTask<Boolean, Boolean, Boolean>()
+		new AsyncTask<Boolean, Boolean, Boolean> ()
 		{
-
 			@Override
-			protected Boolean doInBackground(Boolean... arg0)
+			protected Boolean doInBackground(Boolean... vals)
 			{
 				//Update credentials in database
 				SQLiteDatabase db = MainActivity.this.getDatabase();
-				
+			
 				//Values to insert
 				ContentValues values = new ContentValues();
 				values.put(Account._ID, 1);
@@ -134,12 +170,17 @@ public class MainActivity extends ActionBarActivity
 				//Run insert
 				db.insert(Account.TABLE_NAME, null, values);
 				
-				//Start a new login task
-				LoginTask task = new LoginTask(MainActivity.this);
-				task.execute();
-				
 				return true;
 			}
+			
+			@Override
+			protected void onPostExecute(Boolean result)
+			{
+				//Start a new login task (from main thread, for safety)
+				LoginTask task = new LoginTask(MainActivity.this);
+				task.execute();
+			}
+			
 		}.execute();
 	}
 

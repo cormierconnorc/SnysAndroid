@@ -9,14 +9,14 @@ import android.os.AsyncTask;
 import com.connorsapps.snys.SnysContract.Account;
 
 
-public class LoginTask extends AsyncTask<Boolean, Boolean, Boolean>
+public class LoginTask extends AsyncTask<Void, Void, Boolean>
 {
 	private MainActivity callback;
 	private NetworkManager man;
 	private SQLiteDatabase db;
 	
 	//Flags
-	private boolean hasSave, isValidSave;
+	private boolean hasSave, isValidSave, isNoConnect;
 	
 	public LoginTask(MainActivity callback)
 	{
@@ -26,7 +26,13 @@ public class LoginTask extends AsyncTask<Boolean, Boolean, Boolean>
 	}
 	
 	@Override
-	protected Boolean doInBackground(Boolean... arg0)
+	protected void onPreExecute()
+	{
+		callback.setProgressBarIndeterminateVisibility(true);
+	}
+	
+	@Override
+	protected Boolean doInBackground(Void... arg0)
 	{
 		String[] projection = {
 			Account.COLUMN_EMAIL,
@@ -63,17 +69,25 @@ public class LoginTask extends AsyncTask<Boolean, Boolean, Boolean>
 		}
 		catch (IOException e)
 		{
+			this.isNoConnect = true;
+			this.onProgressUpdate();
 			e.printStackTrace();
 			return false;
 		}
 	}
 	
 	@Override
-	protected void onProgressUpdate(Boolean... unused)
-	{
+	protected void onPostExecute(Boolean result)
+	{		
+		callback.setProgressBarIndeterminateVisibility(false);
+		
 		if (!this.hasSave)
 		{
 			callback.onNoSave();
+		}
+		else if (this.isNoConnect)
+		{
+			callback.onNoConnection();
 		}
 		else if (!this.isValidSave)
 		{

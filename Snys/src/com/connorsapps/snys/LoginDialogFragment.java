@@ -36,6 +36,14 @@ public class LoginDialogFragment extends DialogFragment
 		final EditText passInput = (EditText)root.findViewById(R.id.password);
 		builder.setView(root);
 		
+		//If login credentials exist, fill in the fields
+		NetworkManager netMan = callback.getNetworkManager();
+		if (netMan.getCredentials() != null)
+		{
+			emailInput.setText(netMan.getCredentials().getEmail());
+			passInput.setText(netMan.getCredentials().getPass());
+		}
+		
 		builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
 			
 			@Override
