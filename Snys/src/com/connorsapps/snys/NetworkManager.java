@@ -5,8 +5,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -18,11 +20,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 
 public class NetworkManager
 {
 	//Temporary local address of server on my network. You'll need to change this.
-	public static final String SERVER = "http://192.168.1.3:8005";
+	public static final String SERVER = "http://192.168.1.8:8005";
 	private Credentials credentials;
 	private Gson gson;
 	
@@ -126,6 +129,8 @@ public class NetworkManager
 
 	/**
 	 * Check if current credentials are valid
+	 * @return Are they?
+	 * @throws IOException Hello server? Anyone there?
 	 */
 	public boolean checkValid() throws IOException
 	{
@@ -188,6 +193,11 @@ public class NetworkManager
 		return info;
 	}
 	
+	/**
+	 * Get notifications (handled and pending) from server
+	 * @return
+	 * @throws IOException
+	 */
 	public Notification[] getNotifications() throws IOException
 	{
 		String strInfo = this.doGet("/notifications", this.credentials.toString());		
@@ -266,6 +276,282 @@ public class NetworkManager
 		return toGroups(str);
 	}
 	
+	/**
+	 * Create a group and return the object representing it
+	 * @param groupname
+	 * @return
+	 * @throws IOException
+	 */
+	public Group createGroup(String groupname) throws IOException
+	{
+		String resp = this.doPost("/createGroup", this.credentials.toString() + "&groupname=" + urlEncode(groupname));
+		
+		return gson.fromJson(resp, InternalMembership.class).toGroup();
+	}
+	
+	/**
+	 * Try to delete a user
+	 * @throws IOException on connection fail
+	 * @throws SnysException if deletion fails
+	 */
+	public void deleteUser() throws IOException, SnysException
+	{
+		String resp = this.doPost("/deleteUser", this.credentials.toString());
+		
+		throwOnError(resp);
+	}
+	
+	/**
+	 * Update user account information
+	 * @param newEmail New email. If no change, leave null
+	 * @param newPass New pass. Leave null for no change
+	 * @throws IOException
+	 * @throws SnysException
+	 */
+	public void updateUser(String newEmail, String newPass) throws IOException, SnysException
+	{
+		//No need to waste precious data on no change:
+		if (newEmail == null && newPass == null)
+			return;
+		
+		String query = this.credentials.toString() +
+				(newEmail != null ? "&newEmail=" + urlEncode(newEmail) : "") +
+				(newPass != null ? "&newPass=" + urlEncode(newPass) : "");
+		String resp = this.doPost("/updateUser", query);
+		
+		throwOnError(resp);
+	}
+	
+	/**
+	 * Handle a note on the server
+	 * @param nid
+	 * @param newStatus: One of All, JustEmail, Hide, Alarm, and NoRemind
+	 * @param remindAt: Ignored unless newStatus is All, JustEmail, or Alarm
+	 * @return Notification representing the handled notification from the server
+	 * @throws IOExceptoin On connection fail
+	 * @throws SnysException On generic error. Caused by failure to handle note (which shouldn't happen)
+	 */
+	public Notification handleNote(int nid, String newStatus, long remindAt) throws IOException, SnysException
+	{
+		String query = this.credentials.toString() +
+				"&nid=" + nid +
+				"&newStatus=" + urlEncode(newStatus) +
+				"&remindAt=" + remindAt;
+		String resp = this.doPost("/handleNote", query);
+		
+		throwOnError(resp);
+		
+		return gson.fromJson(resp, InternalHandledNotification.class).toNotification();
+	}
+	
+	
+	/**
+	 * Accept an invitation to a group
+	 * @param gid
+	 * @return the group you are now a member of. Yay for you!
+	 * @throws IOException
+	 * @throws SnysException On no group returned (incorrect gid, maybe?)
+	 */
+	public Group acceptInvite(int gid) throws IOException, SnysException
+	{
+		String query = this.credentials.toString() +
+				"&gid=" + gid;
+		String resp = this.doPost("/acceptInvite", query);
+		
+		InternalMembership[] groups = gson.fromJson(resp, InternalMembership[].class);
+		
+		if (groups.length == 0)
+			throw new SnysException("Invalid invitation!");
+		
+		return groups[0].toGroup();
+	}
+	
+	/**
+	 * Deny an invitation
+	 * Note: Does not throw exception on failure, as that
+	 * can only happen when the invite did not exist in the
+	 * first place. Resulting state is the same!
+	 * @param gid
+	 * @throws IOException
+	 */
+	public void denyInvite(int gid) throws IOException
+	{
+		String query = this.credentials.toString() + "&gid=" + gid;
+		this.doPost("/denyInvite", query);
+	}
+	
+	/**
+	 * Invite a user with given email to the group with given gid
+	 * @param gid
+	 * @param invite
+	 * @param permissions
+	 * @throws IOException
+	 * @throws SnysException On bad request (permissions too high, for example)
+	 */
+	public void inviteUser(int gid, String invite, String permissions) throws IOException, SnysException
+	{
+		String query = this.credentials.toString() +
+				"&gid=" + gid +
+				"&invite=" + urlEncode(invite) +
+				"&permissions=" + urlEncode(permissions);
+		String resp = this.doPost("/inviteUser", query);
+		
+		throwOnError(resp);
+	}
+	
+	/**
+	 * Leave a group. No exception on fail, since the state is the same 
+	 * @param gid
+	 * @throws IOException On connect fail
+	 */
+	public void leaveGroup(int gid) throws IOException
+	{
+		String query = this.getCredentials().toString() + "&gid=" + gid;
+		this.doPost("/leaveGroup", query);
+	}
+	
+	/**
+	 * Delete a group. Requires Admin permissions!
+	 * @param gid
+	 * @throws IOException
+	 * @throws SnysException
+	 */
+	public void deleteGroup(int gid) throws IOException, SnysException
+	{
+		String query = this.getCredentials().toString() + "&gid=" + gid;
+		throwOnError(this.doPost("/deleteGroup", query));
+	}
+	
+	/**
+	 * Create a note
+	 * @param gid
+	 * @param text
+	 * @param time
+	 * @return
+	 * @throws IOException
+	 * @throws SnysException On note creation error
+	 */
+	public Notification createNote(int gid, String text, long time) throws IOException, SnysException
+	{
+		String query = this.getCredentials().toString() + 
+				"&gid=" + gid +
+				"&text=" + urlEncode(text) +
+				"&time=" + time;
+		String resp = this.doPost("/createNote", query);
+		
+		throwOnError(resp);
+		
+		return gson.fromJson(resp, InternalNotification.class).toNotification();
+	}
+	
+	
+	/**
+	 * Create and handle a notification with given info
+	 * @param gid
+	 * @param text
+	 * @param time
+	 * @param newStatus
+	 * @param remindAt
+	 * @return Notification created by server
+	 * @throws IOException
+	 * @throws SnysException
+	 */
+	public Notification createAndHandleNote(int gid, String text, long time, String newStatus, long remindAt) throws IOException, SnysException
+	{
+		String query = this.credentials.toString() +
+				"&gid=" + gid +
+				"&text=" + urlEncode(text) +
+				"&time=" + time +
+				"&newStatus=" + urlEncode(newStatus) +
+				"&remindAt=" + remindAt;
+		String resp = this.doPost("/createAndHandleNote", query);
+		
+		throwOnError(resp);
+		
+		return gson.fromJson(resp, InternalHandledNotification.class).toNotification();
+	}
+	
+	/**
+	 * Edit a note on the server
+	 * @param gid
+	 * @param nid
+	 * @param text Optional. Set to null to ignore and keep current.
+	 * @param time Optional. Set to null to ignore and keep current.
+	 * @return Notification after editing
+	 * @throws IOException
+	 * @throws SnysException On nonexistent note
+	 */
+	public Notification editNote(int gid, int nid, String text, Long time) throws IOException, SnysException
+	{		
+		String query = this.credentials.toString() +
+				"&gid=" + gid +
+				"&nid=" + nid +
+				(text == null ? "" : "&text=" + urlEncode(text)) +
+				(time == null ? "" : "&time=" + time);
+		String resp = this.doPost("/editNote", query);
+		
+		throwOnError(resp);
+		
+		return gson.fromJson(resp, InternalNotification.class).toNotification();
+	}
+	
+	/**
+	 * Delete a note on the server. Must at least
+	 * be a contributor in the relevant group
+	 * @param gid
+	 * @param nid
+	 * @throws IOException
+	 * @throws SnysException on note deletion failure (improper permissions, for example)
+	 */
+	public void deleteNote(int gid, int nid) throws IOException, SnysException
+	{
+		String query = this.credentials.toString() + 
+				"&gid=" + gid +
+				"&nid=" + nid;
+		
+		String resp = this.doPost("/deleteNote", query);
+		
+		throwOnError(resp);
+	}
+	
+	private void throwOnError(String genericResponseJson) throws SnysException
+	{
+		String error = toGenericError(genericResponseJson);
+		
+		if (error != null && !error.equals(""))
+			throw new SnysException(error);
+	}
+	
+	private String toGenericError(String genericResponseJson)
+	{
+		try
+		{
+			return gson.fromJson(genericResponseJson, GenericResponse.class).getError();
+		}
+		catch (JsonSyntaxException e)
+		{
+			return null;
+		}
+	}
+	
+	/**
+	 * Shortcut to use url encoder in utf-8 mode
+	 * @param val
+	 * @return
+	 */
+	private static String urlEncode(String val)
+	{
+		try
+		{
+			return URLEncoder.encode(val, "utf-8");
+		}
+		catch (UnsupportedEncodingException e)
+		{
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
 	public Credentials getCredentials()
 	{
 		return credentials;
@@ -330,25 +616,10 @@ public class NetworkManager
 		{
 			return error;
 		}
-
-		public void setError(String error)
-		{
-			this.error = error;
-		}
-
-		public String getResponse()
-		{
-			return response;
-		}
-
-		public void setResponse(String response)
-		{
-			this.response = response;
-		}
 		
 		public String toString()
 		{
-			return "GenericResponse {error = \"" + error + "\", response = \"" + response + "\"}";
+			return "GenericResponse {error = \"" + urlEncode(error) + "\", response = \"" + urlEncode(response) + "\"}";
 		}
 	}
 	
@@ -362,12 +633,6 @@ public class NetworkManager
 	{
 		private int gid;
 		private String groupname;
-		
-		public InternalGroup(int gid, String groupname)
-		{
-			this.gid = gid;
-			this.groupname = groupname;
-		}
 	}
 	
 	/**
@@ -381,12 +646,6 @@ public class NetworkManager
 	{
 		private InternalGroup group;
 		private String permissions;
-		
-		public InternalMembership(InternalGroup group, String permissions)
-		{
-			this.group = group;
-			this.permissions = permissions;
-		}
 		
 		public Group toGroup()
 		{
@@ -408,15 +667,7 @@ public class NetworkManager
 		private int associatedGid;
 		private String text;
 		private long time;
-		
-		public InternalNotification(int nid, int associatedGid, String text, long time)
-		{
-			this.nid = nid;
-			this.associatedGid = associatedGid;
-			this.text = text;
-			this.time = time;
-		}
-		
+
 		public Notification toNotification()
 		{
 			return new Notification(nid,
@@ -439,14 +690,7 @@ public class NetworkManager
 		private InternalNotification notification;
 		private String status;
 		private long remindAt;
-		
-		public InternalHandledNotification(InternalNotification notification, String status, long remindAt)
-		{
-			this.notification = notification;
-			this.status = status;
-			this.remindAt = remindAt;
-		}
-		
+
 		/**
 		 * Get the external representation of this
 		 * object.
