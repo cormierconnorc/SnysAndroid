@@ -1,26 +1,18 @@
 package com.connorsapps.snys;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
-
-import com.connorsapps.snys.NetworkManager.Credentials;
-import com.connorsapps.snys.SnysContract.Account;
 
 
 public class MainActivity extends ActionBarActivity 
 {
 	private NetworkManager netMan;
-	private SQLiteDatabase db;
+	private DatabaseClient db;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -64,10 +56,24 @@ public class MainActivity extends ActionBarActivity
 	
 	public void logout()
 	{
-		//TODO move to background?
-		db.delete(Account.TABLE_NAME, null, null);
-		this.netMan.setCredentials(null);
-		tryLogin();
+		new AsyncTask<Void, Void, Void>()
+		{
+
+			@Override
+			protected Void doInBackground(Void... arg0)
+			{
+				db.deleteCredentials();
+				netMan.setCredentials(null);
+				return null;
+			}
+			
+			@Override
+			protected void onPostExecute(Void res)
+			{
+				tryLogin();
+			}
+			
+		}.execute();
 	}
 
 	/**
@@ -77,7 +83,7 @@ public class MainActivity extends ActionBarActivity
 	public void onDatabaseOpened(SQLiteDatabase db)
 	{
 		//Set database
-		this.db = db;
+		this.db = new DatabaseClient(db);
 		
 		tryLogin();
 	}
@@ -126,70 +132,6 @@ public class MainActivity extends ActionBarActivity
 	 */
 	public void onSuccessfulLogin()
 	{
-		//Run tests, for now
-		new Thread(new Runnable() {
-			public void run()
-			{
-				try
-				{
-					//Ensure that user has been deleted (only works if last run was successful)
-					netMan.setCredentials(new NetworkManager.Credentials("ccc9ww@virginia.edu", "passy"));
-					netMan.deleteUser();
-					
-					//Big test to see which fail
-					NetworkManager.Credentials streetCred = netMan.register("ccc9ww@virginia.edu", "pass");
-					netMan.setCredentials(streetCred);
-					
-					Log.d("devBug", "Account valid: " + netMan.checkValid());
-					
-					Group mine = netMan.createGroup("Hello World!");
-					Log.d("devBug", "Created group: " + mine);
-					
-					netMan.updateUser(null, "passy");
-					streetCred.setPass("passy");
-					
-					netMan.inviteUser(mine.getId(), streetCred.getEmail(), "Admin");
-					
-					netMan.deleteGroup(mine.getId());
-					
-					Group nGroup = netMan.createGroup("Test 2!!!");
-					
-					long refTime = System.currentTimeMillis() + 10 * 60 * 1000;
-					//Convert to seconds
-					refTime /= 1000;
-					
-					//Create and handle a note separately
-					Notification note = netMan.createNote(nGroup.getId(), "This is an unhandled note (prior to next op, time)", refTime);
-					Notification handled = netMan.handleNote(note.getId(), "Alarm", refTime);
-					Log.d("devBug", "Handled: " + handled);
-					
-					//All together now!
-					handled = netMan.createAndHandleNote(nGroup.getId(), "This is a handled note!", refTime, "Hide", 0);
-					Log.d("devBug", "Combined handled: " + handled);
-					
-					//Change note text
-					Notification edited = netMan.editNote(handled.getGid(), handled.getId(), "I'm edited!", null);
-					Log.d("devBug", "Edited: " + edited);
-					
-					//Delete that last note!
-					netMan.deleteNote(edited.getGid(), edited.getId());
-					
-					//Get resulting information
-					Log.d("devBug", "Info: " + netMan.getInfo().toString());
-					Log.d("devBug", "Notifications: " + Arrays.toString(netMan.getNotifications()));
-					Log.d("devBug", "Groups: " + Arrays.toString(netMan.getGroups()));
-					Log.d("devBug", "Invitations: " + Arrays.toString(netMan.getInvitations()));
-				} 
-				catch (IOException e)
-				{
-					e.printStackTrace();
-				}
-				catch (SnysException e)
-				{
-					e.printStackTrace();
-				}
-			}
-		}).start();
 		
 	}
 	
@@ -206,18 +148,7 @@ public class MainActivity extends ActionBarActivity
 			@Override
 			protected Boolean doInBackground(Boolean... vals)
 			{
-				//Update credentials in database
-				SQLiteDatabase db = MainActivity.this.getDatabase();
-			
-				//Values to insert
-				ContentValues values = new ContentValues();
-				values.put(Account._ID, 1);
-				values.put(Account.COLUMN_EMAIL, email);
-				values.put(Account.COLUMN_PASS, password);
-				
-				//Run insert
-				db.insert(Account.TABLE_NAME, null, values);
-				
+				db.updateCredentials(email, password);				
 				return true;
 			}
 			
@@ -237,7 +168,7 @@ public class MainActivity extends ActionBarActivity
 		return netMan;
 	}
 	
-	public SQLiteDatabase getDatabase()
+	public DatabaseClient getDatabase()
 	{
 		return db;
 	}

@@ -1,13 +1,12 @@
 package com.connorsapps.snys;
 
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
 import com.connorsapps.snys.SnysContract.Account;
 import com.connorsapps.snys.SnysContract.Groups;
 import com.connorsapps.snys.SnysContract.Notifications;
-
-import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteDatabase.CursorFactory;
-import android.database.sqlite.SQLiteOpenHelper;
 
 public class SnysDbHelper extends SQLiteOpenHelper
 {

@@ -124,7 +124,7 @@ public class NetworkManager
 	public Credentials register(String email, String pass) throws IOException, SnysException
 	{
 		Credentials nCreds = new Credentials(email, pass);
-		String r = this.doPost("/register", nCreds.toString());
+		String r = this.doPost("/register", nCreds.toQuery());
 		GenericResponse resp = gson.fromJson(r, GenericResponse.class);
 		
 		if (!resp.getError().equals(""))
@@ -140,7 +140,7 @@ public class NetworkManager
 	 */
 	public boolean checkValid() throws IOException
 	{
-		String resp = this.doGet("/checkValid", this.credentials.toString());
+		String resp = this.doGet("/checkValid", this.credentials.toQuery());
 		GenericResponse gresp = gson.fromJson(resp, GenericResponse.class);
 		Log.d("devBug", gresp.toString());
 		
@@ -155,7 +155,7 @@ public class NetworkManager
 	 */
 	public Information getInfo() throws IOException
 	{
-		String strInfo = this.doGet("/info", this.credentials.toString());		
+		String strInfo = this.doGet("/info", this.credentials.toQuery());		
 		
 //		Log.d("devBug", strInfo);
 		
@@ -206,7 +206,7 @@ public class NetworkManager
 	 */
 	public Notification[] getNotifications() throws IOException
 	{
-		String strInfo = this.doGet("/notifications", this.credentials.toString());		
+		String strInfo = this.doGet("/notifications", this.credentials.toQuery());		
 		
 		Log.d("devBug", strInfo);
 		
@@ -265,7 +265,7 @@ public class NetworkManager
 	 */
 	public Group[] getGroups() throws IOException
 	{
-		String str = this.doGet("/groups", this.credentials.toString());
+		String str = this.doGet("/groups", this.credentials.toQuery());
 		
 		return toGroups(str);
 	}
@@ -277,7 +277,7 @@ public class NetworkManager
 	 */
 	public Group[] getInvitations() throws IOException
 	{
-		String str = this.doGet("/invitations", this.credentials.toString());
+		String str = this.doGet("/invitations", this.credentials.toQuery());
 		
 		return toGroups(str);
 	}
@@ -290,7 +290,7 @@ public class NetworkManager
 	 */
 	public Group createGroup(String groupname) throws IOException
 	{
-		String resp = this.doPost("/createGroup", this.credentials.toString() + "&groupname=" + urlEncode(groupname));
+		String resp = this.doPost("/createGroup", this.credentials.toQuery() + "&groupname=" + urlEncode(groupname));
 		
 		return gson.fromJson(resp, InternalMembership.class).toGroup();
 	}
@@ -302,7 +302,7 @@ public class NetworkManager
 	 */
 	public void deleteUser() throws IOException, SnysException
 	{
-		String resp = this.doPost("/deleteUser", this.credentials.toString());
+		String resp = this.doPost("/deleteUser", this.credentials.toQuery());
 		
 		throwOnError(resp);
 	}
@@ -320,7 +320,7 @@ public class NetworkManager
 		if (newEmail == null && newPass == null)
 			return;
 		
-		String query = this.credentials.toString() +
+		String query = this.credentials.toQuery() +
 				(newEmail != null ? "&newEmail=" + urlEncode(newEmail) : "") +
 				(newPass != null ? "&newPass=" + urlEncode(newPass) : "");
 		String resp = this.doPost("/updateUser", query);
@@ -339,7 +339,7 @@ public class NetworkManager
 	 */
 	public Notification handleNote(int nid, String newStatus, long remindAt) throws IOException, SnysException
 	{
-		String query = this.credentials.toString() +
+		String query = this.credentials.toQuery() +
 				"&nid=" + nid +
 				"&newStatus=" + urlEncode(newStatus) +
 				"&remindAt=" + remindAt;
@@ -360,7 +360,7 @@ public class NetworkManager
 	 */
 	public Group acceptInvite(int gid) throws IOException, SnysException
 	{
-		String query = this.credentials.toString() +
+		String query = this.credentials.toQuery() +
 				"&gid=" + gid;
 		String resp = this.doPost("/acceptInvite", query);
 		
@@ -382,7 +382,7 @@ public class NetworkManager
 	 */
 	public void denyInvite(int gid) throws IOException
 	{
-		String query = this.credentials.toString() + "&gid=" + gid;
+		String query = this.credentials.toQuery() + "&gid=" + gid;
 		this.doPost("/denyInvite", query);
 	}
 	
@@ -396,7 +396,7 @@ public class NetworkManager
 	 */
 	public void inviteUser(int gid, String invite, String permissions) throws IOException, SnysException
 	{
-		String query = this.credentials.toString() +
+		String query = this.credentials.toQuery() +
 				"&gid=" + gid +
 				"&invite=" + urlEncode(invite) +
 				"&permissions=" + urlEncode(permissions);
@@ -412,7 +412,7 @@ public class NetworkManager
 	 */
 	public void leaveGroup(int gid) throws IOException
 	{
-		String query = this.getCredentials().toString() + "&gid=" + gid;
+		String query = this.getCredentials().toQuery() + "&gid=" + gid;
 		this.doPost("/leaveGroup", query);
 	}
 	
@@ -424,7 +424,7 @@ public class NetworkManager
 	 */
 	public void deleteGroup(int gid) throws IOException, SnysException
 	{
-		String query = this.getCredentials().toString() + "&gid=" + gid;
+		String query = this.getCredentials().toQuery() + "&gid=" + gid;
 		throwOnError(this.doPost("/deleteGroup", query));
 	}
 	
@@ -439,7 +439,7 @@ public class NetworkManager
 	 */
 	public Notification createNote(int gid, String text, long time) throws IOException, SnysException
 	{
-		String query = this.getCredentials().toString() + 
+		String query = this.getCredentials().toQuery() + 
 				"&gid=" + gid +
 				"&text=" + urlEncode(text) +
 				"&time=" + time;
@@ -464,7 +464,7 @@ public class NetworkManager
 	 */
 	public Notification createAndHandleNote(int gid, String text, long time, String newStatus, long remindAt) throws IOException, SnysException
 	{
-		String query = this.credentials.toString() +
+		String query = this.credentials.toQuery() +
 				"&gid=" + gid +
 				"&text=" + urlEncode(text) +
 				"&time=" + time +
@@ -489,7 +489,7 @@ public class NetworkManager
 	 */
 	public Notification editNote(int gid, int nid, String text, Long time) throws IOException, SnysException
 	{		
-		String query = this.credentials.toString() +
+		String query = this.credentials.toQuery() +
 				"&gid=" + gid +
 				"&nid=" + nid +
 				(text == null ? "" : "&text=" + urlEncode(text)) +
@@ -511,7 +511,7 @@ public class NetworkManager
 	 */
 	public void deleteNote(int gid, int nid) throws IOException, SnysException
 	{
-		String query = this.credentials.toString() + 
+		String query = this.credentials.toQuery() + 
 				"&gid=" + gid +
 				"&nid=" + nid;
 		
@@ -566,47 +566,6 @@ public class NetworkManager
 	public void setCredentials(Credentials credentials)
 	{
 		this.credentials = credentials;
-	}
-
-	/**
-	 * Login credentials. Used in all verified requests
-	 * @author connor
-	 *
-	 */
-	public static class Credentials
-	{
-		private String email, pass;
-		
-		Credentials(String email, String pass)
-		{
-			setEmail(email);
-			setPass(pass);
-		}
-
-		public String getEmail()
-		{
-			return email;
-		}
-
-		public void setEmail(String email)
-		{
-			this.email = email;
-		}
-
-		public String getPass()
-		{
-			return pass;
-		}
-
-		public void setPass(String pass)
-		{
-			this.pass = pass;
-		}
-		
-		public String toString()
-		{
-			return "email=" + urlEncode(email) + "&pass=" + urlEncode(pass);
-		}
 	}
 	
 	/**
