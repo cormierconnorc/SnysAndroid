@@ -25,7 +25,7 @@ import com.google.gson.JsonSyntaxException;
 public class NetworkManager
 {
 	//Temporary local address of server on my network. You'll need to change this.
-	public static final String SERVER = "http://192.168.1.8:8005";
+	public static final String SERVER = "http://192.168.1.4:8005";
 	private Credentials credentials;
 	private Gson gson;
 	
