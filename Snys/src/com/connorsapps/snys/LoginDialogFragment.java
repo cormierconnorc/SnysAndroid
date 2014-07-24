@@ -7,17 +7,20 @@ import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 
 public class LoginDialogFragment extends DialogFragment
 {
 	private MainActivity callback;
 	private String title;
+	private boolean closeOnDismiss;
 	
 	public LoginDialogFragment(MainActivity callback, String title)
 	{
 		this.callback = callback;
 		this.title = title;
+		this.closeOnDismiss = true;
 	}
 	
 	@Override
@@ -33,6 +36,21 @@ public class LoginDialogFragment extends DialogFragment
 		View root = inflater.inflate(R.layout.login_dialog, null);
 		final EditText emailInput = (EditText)root.findViewById(R.id.email);
 		final EditText passInput = (EditText)root.findViewById(R.id.password);
+		final Button register = (Button)root.findViewById(R.id.reg_button);
+		
+		register.setOnClickListener(new View.OnClickListener()
+		{
+			
+			@Override
+			public void onClick(View v)
+			{
+				//Dismiss this dialog and open up the registration one
+				closeOnDismiss = false;
+				LoginDialogFragment.this.dismiss();
+				callback.createRegistrationDialog();
+			}
+		});
+		
 		builder.setView(root);
 		
 		//If login credentials exist, fill in the fields
@@ -56,7 +74,7 @@ public class LoginDialogFragment extends DialogFragment
 			
 		});
 		
-		builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener()
+		builder.setNegativeButton("Quit", new DialogInterface.OnClickListener()
 		{
 			
 			@Override
@@ -75,6 +93,7 @@ public class LoginDialogFragment extends DialogFragment
 		super.onCancel(dialog);
 		
 		//And close the app
-		callback.finish();
+		if (closeOnDismiss)
+			callback.finish();
 	}
 }

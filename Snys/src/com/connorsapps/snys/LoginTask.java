@@ -7,24 +7,24 @@ import android.os.AsyncTask;
 
 public class LoginTask extends AsyncTask<Void, Void, Boolean>
 {
-	private MainActivity callback;
+	private LoginCallback callback;
 	private NetworkManager man;
 	private DatabaseClient db;
 	
 	//Flags
 	private boolean hasSave, isNoConnect;
 	
-	public LoginTask(MainActivity callback)
+	public LoginTask(LoginCallback callback, NetworkManager man, DatabaseClient db)
 	{
 		this.callback = callback;
-		this.man = callback.getNetworkManager();
-		this.db = callback.getDatabase();
+		this.man = man;
+		this.db = db;
 	}
 	
 	@Override
 	protected void onPreExecute()
 	{
-		callback.setProgressBarIndeterminateVisibility(true);
+		callback.startProgress();
 	}
 	
 	@Override
@@ -56,7 +56,7 @@ public class LoginTask extends AsyncTask<Void, Void, Boolean>
 	@Override
 	protected void onPostExecute(Boolean result)
 	{		
-		callback.setProgressBarIndeterminateVisibility(false);
+		callback.endProgress();
 		
 		if (!this.hasSave)
 		{
@@ -74,6 +74,34 @@ public class LoginTask extends AsyncTask<Void, Void, Boolean>
 		{
 			callback.onSuccessfulLogin();
 		}
+	}
+	
+	/**
+	 * Callback for login task
+	 * @author connor
+	 *
+	 */
+	public static interface LoginCallback extends ProgressCallback
+	{
+		/**
+		 * Callback method for missing save data
+		 */
+		public void onNoSave();
+		
+		/**
+		 * Callback for when server couldn't be reached.
+		 */
+		public void onNoConnection();
+		
+		/**
+		 * Callback method for invalid save data
+		 */
+		public void onInvalidSave();
+		
+		/**
+		 * Callback method for successful login
+		 */
+		public void onSuccessfulLogin();
 	}
 
 }

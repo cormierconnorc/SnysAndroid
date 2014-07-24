@@ -30,7 +30,7 @@ public class GenericDialogFragment extends DialogFragment
 		
 		builder.setIcon(icon);
 		
-		if (!button.equals(""))
+		if (button != null && !button.equals(""))
 			builder.setPositiveButton(button, null);
 		
 		return builder.create();

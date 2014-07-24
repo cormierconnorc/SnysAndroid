@@ -5,9 +5,9 @@ import android.os.AsyncTask;
 
 public class OpenDbTask extends AsyncTask<SnysDbHelper, Boolean, SQLiteDatabase>
 {
-	private MainActivity callback;
+	private DbCallback callback;
 	
-	public OpenDbTask(MainActivity callback)
+	public OpenDbTask(DbCallback callback)
 	{
 		this.callback = callback;
 	}
@@ -22,14 +22,28 @@ public class OpenDbTask extends AsyncTask<SnysDbHelper, Boolean, SQLiteDatabase>
 	@Override
 	protected void onPreExecute()
 	{
-		callback.setProgressBarIndeterminateVisibility(true);
+		callback.startProgress();
 	}
 	
 	@Override
 	protected void onPostExecute(SQLiteDatabase database)
 	{
-		callback.setProgressBarIndeterminateVisibility(false);
+		callback.endProgress();
 		callback.onDatabaseOpened(database);
+	}
+	
+	/**
+	 * Callback interface for database open task
+	 * @author connor
+	 *
+	 */
+	public static interface DbCallback extends ProgressCallback
+	{
+		/**
+		 * Respond to open database
+		 * @param db
+		 */
+		public void onDatabaseOpened(SQLiteDatabase db);
 	}
 
 }

@@ -1,12 +1,16 @@
 package com.connorsapps.snys;
 
-import com.connorsapps.snys.SnysContract.Account;
-import com.connorsapps.snys.SnysContract.Groups;
-import com.connorsapps.snys.SnysContract.Notifications;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+
+import com.connorsapps.snys.SnysContract.Account;
+import com.connorsapps.snys.SnysContract.Groups;
+import com.connorsapps.snys.SnysContract.Notifications;
 
 /**
  * Class to provide common database operations
@@ -76,7 +80,7 @@ public class DatabaseClient
 		db.delete(Account.TABLE_NAME, null, null);
 	}
 	
-	private void insertGroups(Group[] groups, boolean isInvitation)
+	private void insertGroups(List<Group> groups, boolean isInvitation)
 	{
 		db.beginTransaction();
 		
@@ -86,6 +90,7 @@ public class DatabaseClient
 			values.put(Groups._ID, group.getId());
 			values.put(Groups.COLUMN_GROUPNAME, group.getGroupname());
 			values.put(Groups.COLUMN_PERMISSIONS, group.getPermissions().toString());
+			values.put(Groups.COLUMN_IS_INVITATION, (isInvitation ? 1 : 0));
 			
 			//Insert and replace if gid exists
 			db.insertWithOnConflict(Groups.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
@@ -99,7 +104,7 @@ public class DatabaseClient
 	 * Insert an array of groups
 	 * @param groups
 	 */
-	public void insertGroups(Group[] groups)
+	public void insertGroups(List<Group> groups)
 	{
 		this.insertGroups(groups, false);
 	}
@@ -110,14 +115,14 @@ public class DatabaseClient
 	 */
 	public void insertGroup(Group group)
 	{
-		insertGroups(new Group[]{group});
+		insertGroups(Collections.singletonList(group));
 	}
 	
 	/**
 	 * Insert an array of invitations
 	 * @param invites
 	 */
-	public void insertInvitations(Group[] invites)
+	public void insertInvitations(List<Group> invites)
 	{
 		this.insertGroups(invites, true);
 	}
@@ -128,10 +133,10 @@ public class DatabaseClient
 	 */
 	public void insertInvitation(Group invite)
 	{
-		insertInvitations(new Group[]{invite});
+		insertInvitations(Collections.singletonList(invite));
 	}
 	
-	private Group[] getGroups(String selection, String[] selectionArgs)
+	private List<Group> getGroups(String selection, String[] selectionArgs)
 	{
 		Cursor curse = db.query(Groups.TABLE_NAME, 
 				GROUPS_PROJECTION, 
@@ -139,15 +144,16 @@ public class DatabaseClient
 				selectionArgs, 
 				null, null, null);
 		
-		Group[] groups = new Group[curse.getCount()];
+		List<Group> groups = new ArrayList<Group>();
+		
+		if (curse.getCount() == 0)
+			return groups;
 		
 		curse.moveToFirst();
 		
-		int i = 0;
-		
 		do
 		{
-			groups[i++] = this.getGroup(curse);
+			groups.add(this.getGroup(curse));
 		} while (curse.moveToNext());
 		
 		return groups;
@@ -157,7 +163,7 @@ public class DatabaseClient
 	 * Get groups from database
 	 * @return
 	 */
-	public Group[] getGroups()
+	public List<Group> getGroups()
 	{
 		return this.getGroups(Groups.COLUMN_IS_INVITATION + " = ?", new String[] {String.valueOf(0)});
 	}
@@ -166,16 +172,24 @@ public class DatabaseClient
 	 * Get pending invitations from database
 	 * @return
 	 */
-	public Group[] getInvitations()
+	public List<Group> getInvitations()
 	{
 		return this.getGroups(Groups.COLUMN_IS_INVITATION + " != ?", new String[] {String.valueOf(0)});
+	}
+	
+	/**
+	 * Delete all groups (and invitations!)
+	 */
+	public void deleteGroups()
+	{
+		db.delete(Groups.TABLE_NAME, null, null);
 	}
 	
 	/**
 	 * Insert multiple notifications into the database
 	 * @param notifications
 	 */
-	public void insertNotifications(Notification[] notifications)
+	public void insertNotifications(List<Notification> notifications)
 	{
 		db.beginTransaction();
 		
@@ -203,10 +217,10 @@ public class DatabaseClient
 	 */
 	public void insertNotification(Notification note)
 	{
-		this.insertNotifications(new Notification[]{note});
+		this.insertNotifications(Collections.singletonList(note));
 	}
 	
-	private Notification[] getNotifications(String selection, String[] selectionArgs)
+	private List<Notification> getNotifications(String selection, String[] selectionArgs)
 	{
 		Cursor curse = db.query(Notifications.TABLE_NAME, 
 				NOTIFICATIONS_PROJECTION, 
@@ -214,15 +228,16 @@ public class DatabaseClient
 				selectionArgs, 
 				null, null, null);
 		
-		Notification[] notes = new Notification[curse.getCount()];
+		List<Notification> notes = new ArrayList<Notification>();
+		
+		if (curse.getCount() == 0)
+			return notes;
 		
 		curse.moveToFirst();
 		
-		int i = 0;
-		
 		do
 		{
-			notes[i++] = this.getNotification(curse);
+			notes.add(this.getNotification(curse));
 		} while (curse.moveToNext());
 		
 		return notes;
@@ -232,7 +247,7 @@ public class DatabaseClient
 	 * Get all notifications from database
 	 * @return
 	 */
-	public Notification[] getNotifications()
+	public List<Notification> getNotifications()
 	{
 		return getNotifications(null, null);
 	}
@@ -241,18 +256,50 @@ public class DatabaseClient
 	 * Get unhandled from db
 	 * @return
 	 */
-	public Notification[] getUnhandledNotifications()
+	public List<Notification> getUnhandledNotifications()
 	{
-		return getNotifications(Notifications.COLUMN_STATUS + " = ?", new String[] {Notification.Status.UNHANDLED.toString()});
+		return getNotifications(Notifications.COLUMN_STATUS + " = ?", 
+				new String[] {Notification.Status.UNHANDLED.toString()});
+	}
+	
+	/**
+	 * Get the unhandled notifications associated with some group
+	 * @param gid
+	 * @return
+	 */
+	public List<Notification> getUnhandledNotifications(int gid)
+	{
+		return getNotifications(Notifications.COLUMN_STATUS + " = ? AND" + Notifications.COLUMN_GID + " = ?", 
+				new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid)});
 	}
 	
 	/**
 	 * Get handled
 	 * @return
 	 */
-	public Notification[] getHandledNotifications()
+	public List<Notification> getHandledNotifications()
 	{
-		return getNotifications(Notifications.COLUMN_STATUS + " != ?", new String[] {Notification.Status.UNHANDLED.toString()});
+		return getNotifications(Notifications.COLUMN_STATUS + " != ?", 
+				new String[] {Notification.Status.UNHANDLED.toString()});
+	}
+	
+	/**
+	 * Get handled notifications associated with some group
+	 * @param gid
+	 * @return
+	 */
+	public List<Notification> getHandledNotifications(int gid)
+	{
+		return getNotifications(Notifications.COLUMN_STATUS + " != ? AND" + Notifications.COLUMN_GID + " = ?", 
+				new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid)});
+	}
+	
+	/**
+	 * Delete all notifications (handled and pending)
+	 */
+	public void deleteNotifications()
+	{
+		db.delete(Notifications.TABLE_NAME, null, null);
 	}
 	
 	/**
