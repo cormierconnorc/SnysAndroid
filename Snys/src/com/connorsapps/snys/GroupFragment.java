@@ -10,6 +10,9 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,10 +27,13 @@ public class GroupFragment extends Fragment implements ProgressCallback
 	private ListView myList;
 	private ViewGroup root, progress;
 	private DatabaseClient db;
-	
+	private MenuItem createGroup;
 	
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saved)
 	{	
+		//This one will also add menu items.
+		this.setHasOptionsMenu(true);
+		
 		root = (ViewGroup)inflater.inflate(R.layout.fragment_group, container, false);
 		progress = (ViewGroup)inflater.inflate(R.layout.fragment_progress, container, false);
 		
@@ -47,6 +53,25 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		}).start();
 		
 		return root;
+	}
+	
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflate)
+	{
+		createGroup = menu.add(Menu.NONE, Menu.NONE, menu.getItem(menu.size() - 1).getOrder() + 1, "Create Group");
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item)
+	{
+		if (item.getItemId() == createGroup.getItemId())
+		{
+			//TODO create CreateGroupDialogFragment
+			//new CreateGroupDialogFragment(db).show(getActivity().getSupportFragmentManager(), "CreateFrag"); 
+			return true;
+		}
+		
+		return false;
 	}
 	
 	@Override

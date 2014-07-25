@@ -20,14 +20,29 @@ import com.connorsapps.snys.SnysContract.Notifications;
 public class DatabaseClient
 {
 	private SQLiteDatabase db;
+	private boolean showHidden;
 	private static final String[] ACCOUNT_PROJECTION = {Account.COLUMN_EMAIL, Account.COLUMN_PASS},
 			GROUPS_PROJECTION = {Groups._ID, Groups.COLUMN_GROUPNAME, Groups.COLUMN_PERMISSIONS, Groups.COLUMN_IS_INVITATION},
 			NOTIFICATIONS_PROJECTION = {Notifications._ID, Notifications.COLUMN_GID, Notifications.COLUMN_TEXT,
 				Notifications.COLUMN_TIME, Notifications.COLUMN_STATUS, Notifications.COLUMN_REMINDAT};
 	
+	/**
+	 * Set database and use default showHidden value (false)
+	 * @param db
+	 */
 	public DatabaseClient(SQLiteDatabase db)
 	{
+		this(db, false);
+	}
+	
+	/**
+	 * @param db
+	 * @param showHidden Show notifications with hidden status. If false, notification queries will not return these
+	 */
+	public DatabaseClient(SQLiteDatabase db, boolean showHidden)
+	{
 		setDatabase(db);
+		setShowHidden(showHidden);
 	}
 	
 	/**
@@ -265,7 +280,10 @@ public class DatabaseClient
 	 */
 	public List<Notification> getNotifications()
 	{
-		return getNotifications(null, null);
+		String selection = showHidden ? null : Notifications.COLUMN_STATUS + " != ?";
+		String[] args = (showHidden ? null : new String[] {Notification.Status.HIDE.toString()});
+		
+		return getNotifications(selection, args);
 	}
 	
 	/**
@@ -295,8 +313,11 @@ public class DatabaseClient
 	 */
 	public List<Notification> getHandledNotifications()
 	{
-		return getNotifications(Notifications.COLUMN_STATUS + " != ?", 
-				new String[] {Notification.Status.UNHANDLED.toString()});
+		String selection = Notifications.COLUMN_STATUS + " != ?" + (showHidden ? "" : " AND " + Notifications.COLUMN_STATUS + " != ?");
+		String[] args = (showHidden ? new String[] {Notification.Status.UNHANDLED.toString()} : 
+			new String[] {Notification.Status.UNHANDLED.toString(), Notification.Status.HIDE.toString()});
+		
+		return getNotifications(selection, args);
 	}
 	
 	/**
@@ -306,8 +327,14 @@ public class DatabaseClient
 	 */
 	public List<Notification> getHandledNotifications(int gid)
 	{
-		return getNotifications(Notifications.COLUMN_STATUS + " != ? AND " + Notifications.COLUMN_GID + " = ?", 
-				new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid)});
+		String selection = Notifications.COLUMN_STATUS + " != ? AND " + 
+				Notifications.COLUMN_GID + " = ?" + 
+				(showHidden ? "" : " AND " + Notifications.COLUMN_STATUS + " != ?");
+		
+		String[] args = (showHidden ? new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid)} : 
+			new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid), Notification.Status.HIDE.toString()});
+		
+		return getNotifications(selection, args);
 	}
 	
 	/**
@@ -361,5 +388,15 @@ public class DatabaseClient
 	public SQLiteDatabase getDatabase()
 	{
 		return db;
+	}
+
+	public boolean getShowHidden()
+	{
+		return showHidden;
+	}
+
+	public void setShowHidden(boolean showHidden)
+	{
+		this.showHidden = showHidden;
 	}
 }

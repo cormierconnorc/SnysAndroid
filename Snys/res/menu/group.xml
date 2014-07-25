@@ -4,9 +4,39 @@
     tools:context="com.connorsapps.snys.GroupActivity" >
 
     <item
-        android:id="@+id/action_settings"
+        android:id="@+id/option_invite_accept"
         android:orderInCategory="100"
-        android:title="@string/action_settings"
+        android:title="Accept Invite"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/option_invite_deny"
+        android:orderInCategory="200"
+        android:title="Deny Invite"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/option_group_leave"
+        android:orderInCategory="300"
+        android:title="Leave"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/option_group_invite"
+        android:orderInCategory="400"
+        android:title="Invite"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/option_group_submit"
+        android:orderInCategory="500"
+        android:title="Submit"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/option_group_delete"
+        android:orderInCategory="600"
+        android:title="Delete Group"
         app:showAsAction="never"/>
 
 </menu>

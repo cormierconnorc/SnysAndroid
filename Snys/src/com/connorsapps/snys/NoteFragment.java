@@ -10,9 +10,11 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +32,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	private ViewGroup root, progress;
 	private DatabaseClient db;
 	private Map<Integer, Group> groupsMap;
+	private MenuItem visibleToggle;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -54,6 +57,8 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState)
 	{
+		this.setHasOptionsMenu(true);
+		
 		root = (ViewGroup)inflater.inflate(R.layout.fragment_group, container, false);
 		progress = (ViewGroup)inflater.inflate(R.layout.fragment_progress, container, false);
 		
@@ -72,6 +77,39 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		//Start data loading (now in onStart so data is refreshed each time fragment shows)
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
+	}
+	
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflate)
+	{
+		//Add the "Show/hide" hidden option to this fragment after the last option
+		visibleToggle = menu.add(Menu.NONE, Menu.NONE, menu.getItem(menu.size() - 1).getOrder() + 1, getToggleText());
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item)
+	{
+		//Listener for show/hide toggle
+		if (item.getItemId() == visibleToggle.getItemId())
+		{
+			//Toggle 
+			this.db.setShowHidden(!this.db.getShowHidden());
+			
+			//Set item's toggle text
+			visibleToggle.setTitle(getToggleText());
+			
+			//Now start reloading
+			LoadDataTask task = new LoadDataTask();
+			task.execute();
+			
+			return true;
+		}
+		return false;
+	}
+	
+	private String getToggleText()
+	{
+		return (db != null && db.getShowHidden() ? "Hide" : "Show") + " Hidden";
 	}
 	
 	public void setupTouch(final ListView list)

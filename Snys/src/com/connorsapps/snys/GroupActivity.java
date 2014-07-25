@@ -20,6 +20,8 @@ public class GroupActivity extends ActionBarActivity
 		
 		myGroup = this.getIntent().getExtras().getParcelable(GROUP_KEY);
 		
+		this.getSupportActionBar().setTitle(myGroup.getGroupname());
+		
 		if (myGroup == null)
 			throw new RuntimeException("Group MUST be passed in bundle!");
 		
@@ -44,9 +46,50 @@ public class GroupActivity extends ActionBarActivity
 	{
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.group, menu);
+		
+		MenuItem accept = menu.findItem(R.id.option_invite_accept);
+		MenuItem deny = menu.findItem(R.id.option_invite_deny);
+		MenuItem leave = menu.findItem(R.id.option_group_leave);
+		MenuItem submit = menu.findItem(R.id.option_group_submit);
+		MenuItem invite = menu.findItem(R.id.option_group_invite);
+		MenuItem delete = menu.findItem(R.id.option_group_delete);
+		
+		//Set visibility of options menu items based on whether this is an invite or group
+		if (this.myGroup.isInvitation())
+		{
+			accept.setVisible(true);
+			deny.setVisible(true);
+			leave.setVisible(false);
+			submit.setVisible(false);
+			invite.setVisible(false);
+			delete.setVisible(false);
+		}
+		else
+		{
+			accept.setVisible(false);
+			deny.setVisible(false);
+			
+			leave.setVisible(true);
+			invite.setVisible(true);
+			
+			if (myGroup.getPermissions() != Group.Permissions.MEMBER)
+			{
+				submit.setVisible(true);
+				
+				if (myGroup.getPermissions() != Group.Permissions.CONTRIBUTOR)
+				{
+					delete.setVisible(true);
+				}
+				else
+					delete.setVisible(false);
+			}
+			else
+				submit.setVisible(false);
+		}
+		
 		return true;
 	}
-
+	
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
@@ -55,7 +98,16 @@ public class GroupActivity extends ActionBarActivity
 		case android.R.id.home:
 			this.finish();
 			return true;
-		case R.id.action_settings:
+		//TODO proper option handling
+		case R.id.option_invite_deny:
+			return true;
+		case R.id.option_invite_accept:
+			return true;
+		case R.id.option_group_leave:
+			return true;
+		case R.id.option_group_submit:
+			return true;
+		case R.id.option_group_delete:
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
