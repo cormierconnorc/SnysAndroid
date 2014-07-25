@@ -36,11 +36,27 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		
 		setupTouch(myList);
 		
-		//Start data loading
-		LoadDataTask task = new LoadDataTask();
-		task.execute();
+		//Open database in background
+		new Thread(new Runnable() 
+		{
+			public void run()
+			{
+				//Open the database
+				db = new DatabaseClient(new SnysDbHelper(GroupFragment.this.getActivity()).getWritableDatabase());
+			}
+		}).start();
 		
 		return root;
+	}
+	
+	@Override
+	public void onStart()
+	{
+		super.onStart();
+		
+		//Start data loading (now in onStart so data is refreshed each time fragment shows)
+		LoadDataTask task = new LoadDataTask();
+		task.execute();
 	}
 	
 	public void setupTouch(ListView list)
@@ -105,14 +121,24 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		@Override
 		protected void onPreExecute()
 		{
-			startProgress();
+			//startProgress();
 		}
 		
 		@Override
 		protected List<Object> doInBackground(Void... arg0)
 		{
-			//Open the database
-			db = new DatabaseClient(new SnysDbHelper(GroupFragment.this.getActivity().getApplicationContext()).getWritableDatabase());
+			//Wait for database to open (just a precaution)
+			while (db == null)
+			{
+				try
+				{
+					Thread.sleep(50);
+				}
+				catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
 			
 			//Read data from database
 			List<Object> data = new ArrayList<Object>();
@@ -127,7 +153,7 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		@Override
 		protected void onPostExecute(List<Object> data)
 		{
-			endProgress();
+			//endProgress();
 			GroupAdapter ada = new GroupAdapter(root.getContext(), data);
 			myList.setAdapter(ada);
 		}

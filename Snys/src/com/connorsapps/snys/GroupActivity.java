@@ -16,6 +16,8 @@ public class GroupActivity extends ActionBarActivity
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_group);
 		
+		this.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		
 		myGroup = this.getIntent().getExtras().getParcelable(GROUP_KEY);
 		
 		if (myGroup == null)
@@ -48,12 +50,12 @@ public class GroupActivity extends ActionBarActivity
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_settings)
+		switch (item.getItemId())
 		{
+		case android.R.id.home:
+			this.finish();
+			return true;
+		case R.id.action_settings:
 			return true;
 		}
 		return super.onOptionsItemSelected(item);

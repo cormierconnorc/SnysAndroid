@@ -6,9 +6,11 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -27,7 +29,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	private ListView list;
 	private ViewGroup root, progress;
 	private DatabaseClient db;
-	private Map<Integer, String> groupNames;
+	private Map<Integer, Group> groupsMap;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -36,6 +38,16 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		
 		//Get the group argument (determines which notifications to show)
 		gid = this.getArguments().getInt(GID_KEY, -1);
+		
+		//Open database in background
+		new Thread(new Runnable()
+		{
+			public void run()
+			{
+				// Open the database
+				db = new DatabaseClient(new SnysDbHelper(NoteFragment.this.getActivity()).getWritableDatabase());
+			}
+		}).start();
 	}
 	
 	@Override
@@ -49,10 +61,17 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		
 		setupTouch(list);
 		
+		return root;
+	}
+	
+	@Override
+	public void onStart()
+	{
+		super.onStart();
+		
+		//Start data loading (now in onStart so data is refreshed each time fragment shows)
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
-		
-		return root;
 	}
 	
 	public void setupTouch(final ListView list)
@@ -89,8 +108,10 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	
 	public void toNotificationActivity(Notification n)
 	{
-		//TODO transition to NoteActivity
-		
+		Intent notifiableIntent = new Intent(this.getActivity(), NoteActivity.class);
+		notifiableIntent.putExtra(NoteActivity.NOTE_KEY, n);
+		notifiableIntent.putExtra(NoteActivity.GROUP_KEY, this.groupsMap.get(n.getGid()));
+		this.startActivity(notifiableIntent);
 	}
 	
 	@Override
@@ -112,13 +133,24 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		@Override
 		protected void onPreExecute()
 		{
-			startProgress();
+			//startProgress();
 		}
 
 		@Override
 		protected List<Object> doInBackground(Void... arg0)
 		{
-			db = new DatabaseClient(new SnysDbHelper(root.getContext()).getWritableDatabase());
+			//Wait for database to open (just a precaution)
+			while (db == null)
+			{
+				try
+				{
+					Thread.sleep(50);
+				}
+				catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
 			
 			List<Notification> pending, handled;
 			
@@ -128,9 +160,9 @@ public class NoteFragment extends Fragment implements ProgressCallback
 				handled = db.getHandledNotifications(gid);
 				
 				//Build map of groupnames
-				groupNames = new TreeMap<Integer, String>();
+				groupsMap = new TreeMap<Integer, Group>();
 				Group g = db.getGroup(gid);
-				groupNames.put(g.getId(), g.getGroupname());
+				groupsMap.put(g.getId(), g);
 			}
 			else
 			{
@@ -138,10 +170,10 @@ public class NoteFragment extends Fragment implements ProgressCallback
 				handled = db.getHandledNotifications();
 				
 				//Build map of groupnames
-				groupNames = new TreeMap<Integer, String>();
+				groupsMap = new TreeMap<Integer, Group>();
 				List<Group> groups = db.getGroups();
 				for (Group group : groups)
-					groupNames.put(group.getId(), group.getGroupname());
+					groupsMap.put(group.getId(), group);
 			}
 			
 			List<Object> data = new ArrayList<Object>();
@@ -156,7 +188,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		@Override
 		protected void onPostExecute(List<Object> data)
 		{
-			endProgress();
+			//endProgress();
 			list.setAdapter(new NoteAdapter(root.getContext(), data));
 		}
 	}	
@@ -220,8 +252,8 @@ public class NoteFragment extends Fragment implements ProgressCallback
 				TextView noteStatus = (TextView)convertView.findViewById(R.id.note_status);
 				
 				noteText.setText(n.getText());
-				noteGroup.setText(groupNames.get(n.getGid()));
-				noteTime.setText(n.getFormattedTime());
+				noteGroup.setText(groupsMap.get(n.getGid()).getGroupname());
+				noteTime.setText(Notification.getFormattedTime(n.getTime()));
 				noteStatus.setText(n.getStatus().toString());
 			}
 			

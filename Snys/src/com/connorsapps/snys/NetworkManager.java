@@ -669,7 +669,7 @@ public class NetworkManager
 					notification.text,
 					notification.time * 1000,
 					this.status,
-					this.remindAt / 1000);
+					this.remindAt * 1000);
 		}
 	}
 	

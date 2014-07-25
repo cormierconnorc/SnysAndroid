@@ -218,7 +218,7 @@
         android:layout_height="50dp"
         android:id="@+id/fragment_notification_button_row"
         android:orientation="horizontal"
-        android:weightSum="4">
+        android:weightSum="3">
         
         <Button
             android:id="@+id/view_note_button"
@@ -226,13 +226,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="View" />
-        
-        <Button
-            android:id="@+id/handle_note_button"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="Handle" />
         
         <Button
             android:id="@+id/edit_note_button"

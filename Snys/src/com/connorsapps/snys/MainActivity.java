@@ -10,7 +10,6 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
 import android.widget.ArrayAdapter;
 
 
@@ -18,14 +17,13 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 {
 	private NetworkManager netMan;
 	private DatabaseClient db;
-	private ProgressFragment curProg;
+	private ProgressFragment curProgFrag;
+	private NoteFragment noteFrag;
+	private GroupFragment groupFrag;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
-	{
-		//Progress
-		this.requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-		
+	{		
 		super.onCreate(savedInstanceState);		
 		
 		//Just a fragment container
@@ -40,6 +38,16 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		SnysDbHelper helper = new SnysDbHelper(this.getApplicationContext());
 		OpenDbTask opener = new OpenDbTask(this);
 		opener.execute(helper);
+		
+		//Create fragments
+		noteFrag = new NoteFragment();
+		//Empty bundle for arguments
+		Bundle args = new Bundle();
+		noteFrag.setArguments(args);
+
+		groupFrag = new GroupFragment();
+		
+		curProgFrag = new ProgressFragment();
 	}
 	
 	public void setupDropdown()
@@ -61,7 +69,6 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			@Override
 			public boolean onNavigationItemSelected(int pos, long id)
 			{
-				//TODO fix race condition
 				if (pos == 0)
 					showGroups();
 				else
@@ -85,15 +92,13 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	public boolean onOptionsItemSelected(MenuItem item) 
 	{
 		//TODO add actions for other menu items
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_logout) 
+		switch (item.getItemId())
 		{
+		case R.id.action_logout: 
 			logout();
 			return true;
 		}
+		
 		return super.onOptionsItemSelected(item);
 	}
 	
@@ -127,21 +132,14 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	@Override
 	public void startProgress()
 	{
-		if (curProg == null)
-		{
-			curProg = new ProgressFragment();
-			this.getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, curProg).commit();
-		}
+		if (!curProgFrag.isAdded())
+			this.getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, curProgFrag).commit();
 	}
 	
 	@Override
 	public void endProgress()
 	{
-		if (curProg != null)
-		{
-			this.getSupportFragmentManager().beginTransaction().remove(curProg).commit();
-			curProg = null;
-		}
+		this.getSupportFragmentManager().beginTransaction().remove(curProgFrag).commit();
 	}
 
 	@Override
@@ -380,18 +378,12 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	public void showGroups()
 	{
 		//Create fragment and add
-		GroupFragment frag = new GroupFragment();
-		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, frag).commit();
+		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, groupFrag).commit();
 	}
 	
 	public void showNotifications()
 	{	
-		//Create fragment and add
-		NoteFragment note = new NoteFragment();
-		//Empty bundle for arguments
-		Bundle args = new Bundle();
-		note.setArguments(args);
-		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, note).commit();
+		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, noteFrag).commit();
 	}
 
 	public NetworkManager getNetworkManager()

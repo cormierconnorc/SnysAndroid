@@ -31,6 +31,17 @@ public class DatabaseClient
 	}
 	
 	/**
+	 * Convenience wrapper for delete
+	 * @param tableName
+	 * @param selection
+	 * @param selectionArgs
+	 */
+	public void delete(String tableName, String selection, String... selectionArgs)
+	{
+		db.delete(tableName, selection, selectionArgs);
+	}
+	
+	/**
 	 * Get the credentials from the database if they exist, null otherwise
 	 * @return
 	 */
@@ -305,6 +316,11 @@ public class DatabaseClient
 	public void deleteNotifications()
 	{
 		db.delete(Notifications.TABLE_NAME, null, null);
+	}
+	
+	public void deleteNotification(int nid)
+	{
+		this.delete(Notifications.TABLE_NAME, Notifications._ID + " = ?", String.valueOf(nid));
 	}
 	
 	/**

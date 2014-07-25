@@ -22,13 +22,13 @@ public class OpenDbTask extends AsyncTask<SnysDbHelper, Boolean, SQLiteDatabase>
 	@Override
 	protected void onPreExecute()
 	{
-		callback.startProgress();
+		//callback.startProgress();
 	}
 	
 	@Override
 	protected void onPostExecute(SQLiteDatabase database)
 	{
-		callback.endProgress();
+		//callback.endProgress();
 		callback.onDatabaseOpened(database);
 	}
 	

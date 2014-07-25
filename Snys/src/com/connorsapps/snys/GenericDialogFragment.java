@@ -7,6 +7,7 @@ import android.support.v4.app.DialogFragment;
 
 public class GenericDialogFragment extends DialogFragment
 {
+	public static final int NO_ICON = -1;
 	private String title, msg, button;
 	private int icon;
 	
@@ -24,11 +25,14 @@ public class GenericDialogFragment extends DialogFragment
 	{
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 		
-		builder.setTitle(title);
+		if (title != null && !title.equals(""))
+			builder.setTitle(title);
 		
-		builder.setMessage(msg);
+		if (msg != null && !msg.equals(""))
+			builder.setMessage(msg);
 		
-		builder.setIcon(icon);
+		if (icon != NO_ICON)
+			builder.setIcon(icon);
 		
 		if (button != null && !button.equals(""))
 			builder.setPositiveButton(button, null);

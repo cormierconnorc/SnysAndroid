@@ -1,6 +1,7 @@
 package com.connorsapps.snys;
 
 import java.util.Date;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
@@ -146,11 +147,35 @@ public class Notification implements Parcelable
 		return time;
 	}
 	
-	public String getFormattedTime()
+	public static String getFormattedTime(long time, boolean longFormat)
 	{
-		//String format = "h:mm:ss a 'on' EEE, m/dd/yy";	//Too long, consider using on tablets
-		String format = "h:mm a 'on' M/dd/yyyy";
-		return new SimpleDateFormat(format, Locale.getDefault()).format(new Date(this.getTime()));
+		String format = (longFormat ? "h:mm:ss a 'on' EEE, M/dd/yyyy" : "h:mm a 'on' M/dd/yyyy");
+		return new SimpleDateFormat(format, Locale.getDefault()).format(new Date(time));
+	}
+	
+	public static String getFormattedTime(long time)
+	{
+		return getFormattedTime(time, false);
+	}
+	
+	public static long fromFormattedTime(String time, boolean longFormat)
+	{
+		String format = (longFormat ? "h:mm:ss a 'on' EEE, M/dd/yyyy" : "h:mm a 'on' M/dd/yyyy");
+		
+		try
+		{
+			return new SimpleDateFormat(format, Locale.getDefault()).parse(time).getTime();
+		} 
+		catch (ParseException e)
+		{
+			e.printStackTrace();
+			return -1;
+		}
+	}
+	
+	public static long fromFromattedTime(String time)
+	{
+		return fromFormattedTime(time, false);
 	}
 
 	public void setTime(long time)
@@ -161,6 +186,29 @@ public class Notification implements Parcelable
 	public Status getStatus()
 	{
 		return status;
+	}
+	
+	/**
+	 * Get the status in the server's format
+	 * @return
+	 */
+	public String getServerStatus()
+	{
+		switch (status)
+		{
+		case ALL:
+			return "All";
+		case JUST_EMAIL:
+			return "JustEmail";
+		case HIDE:
+			return "Hide";
+		case ALARM:
+			return "Alarm";
+		case NO_REMIND:			
+			return "NoRemind";
+		default:
+			throw new RuntimeException("Cannot send UNHANDLED to server!");
+		}
 	}
 
 	public void setStatus(Status status)

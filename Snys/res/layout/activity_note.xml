@@ -1,6 +1,155 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scrollView1"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" 
+    android:background="#FFFFFFFF">
 
-</LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" 
+        android:id="@+id/an_group_name_row" >
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp" >
+
+            <TextView
+                android:id="@+id/an_group_name_prompt"
+                android:layout_width="75dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:text="Group:"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="#FF33B5E5" />
+           
+
+            <TextView
+                android:id="@+id/an_group_name"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_alignParentTop="true"
+                android:layout_toRightOf="@+id/an_group_name_prompt"
+                android:gravity="center_vertical"
+                android:text="Groupname"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/an_text_prompt"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:gravity="center_vertical"
+            android:text="Text:"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="#FF33B5E5" />
+
+        <EditText
+            android:id="@+id/an_note_text"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:gravity="top|left"
+            android:ems="10"
+            android:inputType="textMultiLine" 
+            android:enabled="false"
+            android:text="Hello world">
+        </EditText>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp" 
+            android:id="@+id/an_time_row">
+
+            <TextView
+                android:id="@+id/an_time_prompt"
+                android:layout_width="75dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:text="Time:"
+                android:textAppearance="?android:attr/textAppearanceMedium" 
+                android:textColor="#FF33B5E5"/>
+
+            <Button
+                android:id="@+id/an_time_selector_button"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_alignParentTop="true"
+                android:layout_toRightOf="@+id/an_time_prompt"
+                android:text="11:07 AM on Sat, 7/26/14" />
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:id="@+id/an_status_row" >
+
+            <TextView
+                android:id="@+id/an_status_prompt"
+                android:layout_width="75dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:text="Status:"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="#FF33B5E5" />
+
+            <Spinner
+                android:id="@+id/an_status_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="0dp"
+                android:layout_toRightOf="@+id/an_status_prompt" />
+
+        </RelativeLayout>
+        
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp" 
+            android:id="@+id/an_remind_at_row">
+
+            <TextView
+                android:id="@+id/an_remind_prompt"
+                android:layout_width="75dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:text="Remind:"
+                android:textAppearance="?android:attr/textAppearanceMedium" 
+                android:textColor="#FF33B5E5"/>
+
+            <Button
+                android:id="@+id/an_remind_time_selector_button"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_alignParentTop="true"
+                android:layout_toRightOf="@+id/an_remind_prompt"
+                android:text="11:07 AM on Sat, 7/26/14" />
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:id="@+id/an_save_button_row" >
+
+            <Button
+                android:id="@+id/an_save_button"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                android:text="Save/Submit/Hide" />
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</ScrollView>

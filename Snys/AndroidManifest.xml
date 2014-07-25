@@ -26,11 +26,14 @@
         </activity>
         <activity
             android:name=".GroupActivity"
-            android:label="@string/title_activity_group"
-            android:parentActivityName=".MainActivity" >
+            android:label="@string/title_activity_group" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="MainActivity" />
+        </activity>
+        <activity
+            android:name=".NoteActivity"
+            android:label="@string/title_activity_note" >
         </activity>
     </application>
 
