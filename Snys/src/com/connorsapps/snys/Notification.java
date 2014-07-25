@@ -1,10 +1,31 @@
 package com.connorsapps.snys;
 
+import java.util.Date;
+import java.text.SimpleDateFormat;
 import java.util.Locale;
 
-public class Notification
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class Notification implements Parcelable
 {
 	public static enum Status {ALL, JUST_EMAIL, HIDE, ALARM, NO_REMIND, UNHANDLED};
+	public static final Parcelable.Creator<Notification> CREATOR =
+			new Parcelable.Creator<Notification>()
+			{
+				@Override
+				public Notification createFromParcel(Parcel source)
+				{
+					return new Notification(source);
+				}
+
+				@Override
+				public Notification[] newArray(int size)
+				{
+					return new Notification[size];
+				}
+		
+			};
 	
 	private int id;
 	private int gid;
@@ -33,6 +54,33 @@ public class Notification
 		this.time = time;
 		this.status = stat;
 		this.remindAt = remindAt;
+	}
+	
+	public Notification(Parcel in)
+	{
+		this(in.readInt(),
+			in.readInt(),
+			in.readString(),
+			in.readLong(),
+			(Status)in.readSerializable(),
+			in.readLong());
+	}
+	
+	@Override
+	public int describeContents()
+	{
+		return 0;
+	}
+	
+	@Override
+	public void writeToParcel(Parcel dest, int flags)
+	{
+		dest.writeInt(id);
+		dest.writeInt(gid);
+		dest.writeString(text);
+		dest.writeLong(time);
+		dest.writeSerializable(status);
+		dest.writeLong(remindAt);
 	}
 	
 	/**
@@ -96,6 +144,13 @@ public class Notification
 	public long getTime()
 	{
 		return time;
+	}
+	
+	public String getFormattedTime()
+	{
+		//String format = "h:mm:ss a 'on' EEE, m/dd/yy";	//Too long, consider using on tablets
+		String format = "h:mm a 'on' M/dd/yyyy";
+		return new SimpleDateFormat(format, Locale.getDefault()).format(new Date(this.getTime()));
 	}
 
 	public void setTime(long time)

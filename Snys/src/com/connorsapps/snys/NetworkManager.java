@@ -185,10 +185,10 @@ public class NetworkManager
 				info.handled.add(gson.fromJson(obj, InternalHandledNotification.class).toNotification());
 				break;
 			case "Invitation":
-				info.invitations.add(gson.fromJson(obj, InternalMembership.class).toGroup());
+				info.invitations.add(gson.fromJson(obj, InternalMembership.class).toGroup(true));
 				break;
 			case "Membership":
-				info.memberships.add(gson.fromJson(obj, InternalMembership.class).toGroup());
+				info.memberships.add(gson.fromJson(obj, InternalMembership.class).toGroup(false));
 				break;
 			default:
 				throw new IOException("Invalid JSON element in server response!");
@@ -246,14 +246,14 @@ public class NetworkManager
 		return notifications;
 	}
 	
-	private Group[] toGroups(String str)
+	private Group[] toGroups(String str, boolean isInvitation)
 	{
 		InternalMembership[] groups = gson.fromJson(str, InternalMembership[].class);
 		
 		Group[] rGroups = new Group[groups.length];
 		
 		for (int i = 0; i < groups.length; i++)
-			rGroups[i] = groups[i].toGroup();
+			rGroups[i] = groups[i].toGroup(isInvitation);
 		
 		return rGroups;
 	}
@@ -267,7 +267,7 @@ public class NetworkManager
 	{
 		String str = this.doGet("/groups", this.credentials.toQuery());
 		
-		return toGroups(str);
+		return toGroups(str, false);
 	}
 	
 	/**
@@ -279,7 +279,7 @@ public class NetworkManager
 	{
 		String str = this.doGet("/invitations", this.credentials.toQuery());
 		
-		return toGroups(str);
+		return toGroups(str, true);
 	}
 	
 	/**
@@ -292,7 +292,7 @@ public class NetworkManager
 	{
 		String resp = this.doPost("/createGroup", this.credentials.toQuery() + "&groupname=" + urlEncode(groupname));
 		
-		return gson.fromJson(resp, InternalMembership.class).toGroup();
+		return gson.fromJson(resp, InternalMembership.class).toGroup(false);
 	}
 	
 	/**
@@ -342,7 +342,7 @@ public class NetworkManager
 		String query = this.credentials.toQuery() +
 				"&nid=" + nid +
 				"&newStatus=" + urlEncode(newStatus) +
-				"&remindAt=" + remindAt;
+				"&remindAt=" + (remindAt / 1000);
 		String resp = this.doPost("/handleNote", query);
 		
 		throwOnError(resp);
@@ -369,7 +369,7 @@ public class NetworkManager
 		if (groups.length == 0)
 			throw new SnysException("Invalid invitation!");
 		
-		return groups[0].toGroup();
+		return groups[0].toGroup(false);
 	}
 	
 	/**
@@ -442,7 +442,7 @@ public class NetworkManager
 		String query = this.getCredentials().toQuery() + 
 				"&gid=" + gid +
 				"&text=" + urlEncode(text) +
-				"&time=" + time;
+				"&time=" + (time / 1000);
 		String resp = this.doPost("/createNote", query);
 		
 		throwOnError(resp);
@@ -467,9 +467,9 @@ public class NetworkManager
 		String query = this.credentials.toQuery() +
 				"&gid=" + gid +
 				"&text=" + urlEncode(text) +
-				"&time=" + time +
+				"&time=" + (time / 1000) +
 				"&newStatus=" + urlEncode(newStatus) +
-				"&remindAt=" + remindAt;
+				"&remindAt=" + (remindAt / 1000);
 		String resp = this.doPost("/createAndHandleNote", query);
 		
 		throwOnError(resp);
@@ -493,7 +493,7 @@ public class NetworkManager
 				"&gid=" + gid +
 				"&nid=" + nid +
 				(text == null ? "" : "&text=" + urlEncode(text)) +
-				(time == null ? "" : "&time=" + time);
+				(time == null ? "" : "&time=" + (time / 1000));
 		String resp = this.doPost("/editNote", query);
 		
 		throwOnError(resp);
@@ -612,11 +612,12 @@ public class NetworkManager
 		private InternalGroup group;
 		private String permissions;
 		
-		public Group toGroup()
+		public Group toGroup(boolean isInvitation)
 		{
 			return new Group(group.gid,
 					group.groupname,
-					permissions);
+					permissions,
+					isInvitation);
 		}
 	}
 	
@@ -638,7 +639,7 @@ public class NetworkManager
 			return new Notification(nid,
 					associatedGid,
 					text,
-					time,
+					time * 1000,
 					Notification.Status.UNHANDLED,
 					0);
 		}
@@ -666,9 +667,9 @@ public class NetworkManager
 			return new Notification(notification.nid,
 					notification.associatedGid,
 					notification.text,
-					notification.time,
+					notification.time * 1000,
 					this.status,
-					this.remindAt);
+					this.remindAt / 1000);
 		}
 	}
 	

@@ -21,7 +21,7 @@ public class DatabaseClient
 {
 	private SQLiteDatabase db;
 	private static final String[] ACCOUNT_PROJECTION = {Account.COLUMN_EMAIL, Account.COLUMN_PASS},
-			GROUPS_PROJECTION = {Groups._ID, Groups.COLUMN_GROUPNAME, Groups.COLUMN_PERMISSIONS},
+			GROUPS_PROJECTION = {Groups._ID, Groups.COLUMN_GROUPNAME, Groups.COLUMN_PERMISSIONS, Groups.COLUMN_IS_INVITATION},
 			NOTIFICATIONS_PROJECTION = {Notifications._ID, Notifications.COLUMN_GID, Notifications.COLUMN_TEXT,
 				Notifications.COLUMN_TIME, Notifications.COLUMN_STATUS, Notifications.COLUMN_REMINDAT};
 	
@@ -80,7 +80,7 @@ public class DatabaseClient
 		db.delete(Account.TABLE_NAME, null, null);
 	}
 	
-	private void insertGroups(List<Group> groups, boolean isInvitation)
+	public void insertGroups(List<Group> groups)
 	{
 		db.beginTransaction();
 		
@@ -90,7 +90,7 @@ public class DatabaseClient
 			values.put(Groups._ID, group.getId());
 			values.put(Groups.COLUMN_GROUPNAME, group.getGroupname());
 			values.put(Groups.COLUMN_PERMISSIONS, group.getPermissions().toString());
-			values.put(Groups.COLUMN_IS_INVITATION, (isInvitation ? 1 : 0));
+			values.put(Groups.COLUMN_IS_INVITATION, (group.isInvitation() ? 1 : 0));
 			
 			//Insert and replace if gid exists
 			db.insertWithOnConflict(Groups.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
@@ -98,15 +98,6 @@ public class DatabaseClient
 		
 		db.setTransactionSuccessful();
 		db.endTransaction();
-	}
-	
-	/**
-	 * Insert an array of groups
-	 * @param groups
-	 */
-	public void insertGroups(List<Group> groups)
-	{
-		this.insertGroups(groups, false);
 	}
 	
 	/**
@@ -119,21 +110,21 @@ public class DatabaseClient
 	}
 	
 	/**
-	 * Insert an array of invitations
+	 * Insert an array of invitations (alias for insertGroups)
 	 * @param invites
 	 */
 	public void insertInvitations(List<Group> invites)
 	{
-		this.insertGroups(invites, true);
+		this.insertGroups(invites);
 	}
 	
 	/**
-	 * Insert a single invitation into the database
+	 * Insert a single invitation into the database (alias for insertGroup)
 	 * @param invite
 	 */
 	public void insertInvitation(Group invite)
 	{
-		insertInvitations(Collections.singletonList(invite));
+		insertGroup(invite);
 	}
 	
 	private List<Group> getGroups(String selection, String[] selectionArgs)
@@ -157,6 +148,20 @@ public class DatabaseClient
 		} while (curse.moveToNext());
 		
 		return groups;
+	}
+	
+	/**
+	 * Get a single group out of database
+	 * @param gid
+	 * @return Group if it exists, null otherwise
+	 */
+	public Group getGroup(int gid)
+	{
+		List<Group> groups = this.getGroups(Groups._ID + " = ?", new String[] {String.valueOf(gid)});
+		
+		if (groups.size() == 0)
+			return null;
+		return groups.get(0);
 	}
 	
 	/**
@@ -269,7 +274,7 @@ public class DatabaseClient
 	 */
 	public List<Notification> getUnhandledNotifications(int gid)
 	{
-		return getNotifications(Notifications.COLUMN_STATUS + " = ? AND" + Notifications.COLUMN_GID + " = ?", 
+		return getNotifications(Notifications.COLUMN_STATUS + " = ? AND " + Notifications.COLUMN_GID + " = ?", 
 				new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid)});
 	}
 	
@@ -290,7 +295,7 @@ public class DatabaseClient
 	 */
 	public List<Notification> getHandledNotifications(int gid)
 	{
-		return getNotifications(Notifications.COLUMN_STATUS + " != ? AND" + Notifications.COLUMN_GID + " = ?", 
+		return getNotifications(Notifications.COLUMN_STATUS + " != ? AND " + Notifications.COLUMN_GID + " = ?", 
 				new String[] {Notification.Status.UNHANDLED.toString(), String.valueOf(gid)});
 	}
 	
@@ -312,7 +317,8 @@ public class DatabaseClient
 		int id = curse.getInt(curse.getColumnIndexOrThrow(Groups._ID));
 		String groupname = curse.getString(curse.getColumnIndexOrThrow(Groups.COLUMN_GROUPNAME));
 		String permissions = curse.getString(curse.getColumnIndexOrThrow(Groups.COLUMN_PERMISSIONS));
-		return new Group(id, groupname, permissions);
+		boolean isInvitation = curse.getInt(curse.getColumnIndexOrThrow(Groups.COLUMN_IS_INVITATION)) == 0 ? false : true;
+		return new Group(id, groupname, permissions, isInvitation);
 	}
 	
 	/**

@@ -1,8 +1,6 @@
 package com.connorsapps.snys;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import android.content.DialogInterface;
 import android.database.sqlite.SQLiteDatabase;
@@ -10,7 +8,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
@@ -87,6 +84,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) 
 	{
+		//TODO add actions for other menu items
 		// Handle action bar item clicks here. The action bar will
 		// automatically handle clicks on the Home/Up button, so long
 		// as you specify a parent activity in AndroidManifest.xml.
@@ -212,6 +210,12 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 					
 					//Get information off of server
 					NetworkManager.Information info = netMan.getInfo();
+					
+					//Clear out the old stuff (since this is a full update)
+					//This is inefficient, of course, but the server currently
+					//lacks the ability to send "update chunks" or some similar shit.
+					db.deleteGroups();
+					db.deleteNotifications();
 					
 					//Now put it into the database
 					db.insertGroups(info.memberships);
@@ -366,56 +370,28 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		{
 		case 0:
 			showGroups();
+			break;
 		case 1:
 			showNotifications();
+			break;
 		}
 	}
 	
 	public void showGroups()
 	{
-		//Do not allow display prior to database setup
-		if (db == null)
-			return;
-		
-		new AsyncTask<Void, Void, GroupFragment>()
-		{
-			@Override
-			public GroupFragment doInBackground(Void... voids)
-			{
-				startProgress();
-				
-				GroupFragment frag = new GroupFragment();
-				
-				//Set data
-				List<Object> data = new ArrayList<Object>();
-				data.add("Groups:");
-				data.addAll(db.getGroups());
-				data.add("Invitations:");
-				data.addAll(db.getInvitations());
-				
-				Log.d("devBug", "And here's what I found: " + data.toString());
-				
-				frag.setListData(data);
-				
-				return frag;
-			}
-			
-			@Override
-			public void onPostExecute(GroupFragment frag)
-			{
-				endProgress();
-				getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, frag).commit();
-			}
-		}.execute();
+		//Create fragment and add
+		GroupFragment frag = new GroupFragment();
+		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, frag).commit();
 	}
 	
 	public void showNotifications()
-	{
-		//Do not allow display prior to database setup
-		if (db == null)
-			return;
-				
-		//TODO
+	{	
+		//Create fragment and add
+		NoteFragment note = new NoteFragment();
+		//Empty bundle for arguments
+		Bundle args = new Bundle();
+		note.setArguments(args);
+		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, note).commit();
 	}
 
 	public NetworkManager getNetworkManager()

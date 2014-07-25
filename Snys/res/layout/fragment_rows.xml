@@ -1,0 +1,253 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp" 
+        android:id="@+id/fragment_both_title_row" >
+        
+        <TextView
+            android:id="@+id/section_title"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:textColor="#FF33B5E5"
+            android:textSize="22sp"
+            android:text="Section title"/>
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/fragment_group_info_row"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="vertical"
+        android:weightSum="2" >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+            
+            <!-- Spacer -->
+
+            <View
+                android:layout_width="15dp"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/groupname"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="Groupname"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+            
+            <!-- Spacer -->
+
+            <View
+                android:layout_width="15dp"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/group_permissions"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="Permissions"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="#C0C0C0" />
+        </LinearLayout>
+    </LinearLayout>
+    
+    
+    <LinearLayout
+        android:id="@+id/fragment_notification_info_row"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="vertical"
+        android:weightSum="2" >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+            
+            <!-- Spacer -->
+
+            <View
+                android:layout_width="15dp"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/note_text"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="Notification text"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" 
+            android:weightSum="4">
+            
+            <!-- Spacer -->
+
+            <View
+                android:layout_width="15dp"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/note_group"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="Group"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="#C0C0C0" />
+            
+            <!-- Spacer -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="#C0C0C0"/>
+            
+            <TextView
+                android:id="@+id/note_time"
+                android:layout_width="0dp"
+                android:layout_weight="2"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="Time"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="#C0C0C0" />
+            
+            <!-- Spacer -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="#C0C0C0"/>
+            
+            <TextView
+                android:id="@+id/note_status"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical|right"
+                android:text="Status"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="#C0C0C0" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:id="@+id/fragment_group_group_button_row"
+        android:orientation="horizontal"
+        android:weightSum="4">
+
+        <Button
+            android:id="@+id/leave_group_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Leave" />
+
+        <Button
+            android:id="@+id/invite_to_group_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Invite" />
+        
+        <Button
+            android:id="@+id/submit_to_group_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Submit" />
+        
+        <Button
+            android:id="@+id/delete_group_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Delete" />
+      
+        
+    </LinearLayout>
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:id="@+id/fragment_group_invite_button_row"
+        android:orientation="horizontal"
+        android:weightSum="2">
+        
+        <Button
+            android:id="@+id/accept_invite_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Accept" />
+        
+        <Button
+            android:id="@+id/deny_invite_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Deny" />
+        
+    </LinearLayout>
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:id="@+id/fragment_notification_button_row"
+        android:orientation="horizontal"
+        android:weightSum="4">
+        
+        <Button
+            android:id="@+id/view_note_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="View" />
+        
+        <Button
+            android:id="@+id/handle_note_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Handle" />
+        
+        <Button
+            android:id="@+id/edit_note_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Edit" />
+        
+        <Button
+            android:id="@+id/delete_note_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Delete" />
+        
+        </LinearLayout>
+
+</LinearLayout>

@@ -2,9 +2,10 @@ package com.connorsapps.snys;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -19,31 +20,42 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
 
-public class GroupFragment extends Fragment implements ProgressCallback
+public class NoteFragment extends Fragment implements ProgressCallback
 {
-	private ListView myList;
+	public static final String GID_KEY = "com.connorsapps.NoteFragment.gid";
+	private int gid;
+	private ListView list;
 	private ViewGroup root, progress;
 	private DatabaseClient db;
+	private Map<Integer, String> groupNames;
 	
+	@Override
+	public void onCreate(Bundle savedInstanceState)
+	{
+		super.onCreate(savedInstanceState);
+		
+		//Get the group argument (determines which notifications to show)
+		gid = this.getArguments().getInt(GID_KEY, -1);
+	}
 	
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saved)
-	{	
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container,
+			Bundle savedInstanceState)
+	{
 		root = (ViewGroup)inflater.inflate(R.layout.fragment_group, container, false);
 		progress = (ViewGroup)inflater.inflate(R.layout.fragment_progress, container, false);
 		
-		//Set the adapter for the listview
-		myList = (ListView)root.findViewById(R.id.sexy_group_view);
+		list = (ListView)root.findViewById(R.id.sexy_group_view);
 		
-		setupTouch(myList);
+		setupTouch(list);
 		
-		//Start data loading
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
 		
 		return root;
 	}
 	
-	public void setupTouch(ListView list)
+	public void setupTouch(final ListView list)
 	{
 		final GestureDetector det = new GestureDetector(this.getActivity().getBaseContext(), 
 				new FlipGestureListener(list, this.getResources().getDisplayMetrics(), 
@@ -53,13 +65,13 @@ public class GroupFragment extends Fragment implements ProgressCallback
 					public boolean onRowClick(int row)
 					{
 						//Handled by doing nothing for string
-						if (myList.getAdapter().getItemViewType(row) == GroupAdapter.TYPE_STRING)
+						if (list.getAdapter().getItemViewType(row) == NoteAdapter.TYPE_STRING)
 							return true;
 						
 						//For a group/invitation row, pass it on to a notification list
-						Group g = (Group)myList.getAdapter().getItem(row);
+						Notification n = (Notification)list.getAdapter().getItem(row);
 						
-						toGroupActivity(g);
+						toNotificationActivity(n);
 						
 						return true;
 					}
@@ -75,15 +87,10 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		});
 	}
 	
-	/**
-	 * Transition to the group activity showing a certain group.
-	 * @param g
-	 */
-	public void toGroupActivity(Group g)
+	public void toNotificationActivity(Notification n)
 	{
-		Intent intentional = new Intent(this.getActivity(), GroupActivity.class);
-		intentional.putExtra(GroupActivity.GROUP_KEY, g);
-		this.startActivity(intentional);
+		//TODO transition to NoteActivity
+		
 	}
 	
 	@Override
@@ -97,7 +104,7 @@ public class GroupFragment extends Fragment implements ProgressCallback
 	public void endProgress()
 	{
 		root.removeAllViews();
-		root.addView(myList);
+		root.addView(list);
 	}
 	
 	private class LoadDataTask extends AsyncTask<Void, Void, List<Object>>
@@ -107,20 +114,42 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		{
 			startProgress();
 		}
-		
+
 		@Override
 		protected List<Object> doInBackground(Void... arg0)
 		{
-			//Open the database
-			db = new DatabaseClient(new SnysDbHelper(GroupFragment.this.getActivity().getApplicationContext()).getWritableDatabase());
+			db = new DatabaseClient(new SnysDbHelper(root.getContext()).getWritableDatabase());
 			
-			//Read data from database
+			List<Notification> pending, handled;
+			
+			if (gid != -1)
+			{
+				pending = db.getUnhandledNotifications(gid);
+				handled = db.getHandledNotifications(gid);
+				
+				//Build map of groupnames
+				groupNames = new TreeMap<Integer, String>();
+				Group g = db.getGroup(gid);
+				groupNames.put(g.getId(), g.getGroupname());
+			}
+			else
+			{
+				pending = db.getUnhandledNotifications();
+				handled = db.getHandledNotifications();
+				
+				//Build map of groupnames
+				groupNames = new TreeMap<Integer, String>();
+				List<Group> groups = db.getGroups();
+				for (Group group : groups)
+					groupNames.put(group.getId(), group.getGroupname());
+			}
+			
 			List<Object> data = new ArrayList<Object>();
-			data.add("Groups:");
-			data.addAll(db.getGroups());
-			data.add("Invitations:");
-			data.addAll(db.getInvitations());
-			
+			data.add("Pending:");
+			data.addAll(pending);
+			data.add("Handled:");
+			data.addAll(handled);
+		
 			return data;
 		}
 		
@@ -128,16 +157,15 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		protected void onPostExecute(List<Object> data)
 		{
 			endProgress();
-			GroupAdapter ada = new GroupAdapter(root.getContext(), data);
-			myList.setAdapter(ada);
+			list.setAdapter(new NoteAdapter(root.getContext(), data));
 		}
-	}
+	}	
 	
-	private class GroupAdapter extends ArrayAdapter<Object>
+	private class NoteAdapter extends ArrayAdapter<Object>
 	{
-		private static final int TYPE_STRING = 0, TYPE_GROUP = 1, TYPE_INVITATION = 2;
+		private static final int TYPE_STRING = 0, TYPE_NOTE = 1;
 		
-		public GroupAdapter(Context context, List<Object> objects)
+		public NoteAdapter(Context context, List<Object> objects)
 		{
 			super(context, 0, objects);
 		}	
@@ -148,7 +176,7 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		@Override
 		public int getViewTypeCount()
 		{
-			return 3;
+			return 2;
 		}
 		
 		/**
@@ -162,10 +190,8 @@ public class GroupFragment extends Fragment implements ProgressCallback
 			
 			if (item instanceof String)
 				return TYPE_STRING;
-			else if (((Group)item).isInvitation())
-				return TYPE_INVITATION;
 			else
-				return TYPE_GROUP;
+				return TYPE_NOTE;
 		}
 		
 		@Override
@@ -185,15 +211,18 @@ public class GroupFragment extends Fragment implements ProgressCallback
 				TextView title = (TextView)convertView.findViewById(R.id.section_title);
 				title.setText((String)itm);
 			}
-			//TODO split up (when button row and touch added)
 			else
 			{
-				Group g = (Group)itm;
-				TextView gName = (TextView)convertView.findViewById(R.id.groupname);
-				TextView gPerm = (TextView)convertView.findViewById(R.id.group_permissions);
+				Notification n = (Notification)itm;
+				TextView noteText = (TextView)convertView.findViewById(R.id.note_text);
+				TextView noteGroup = (TextView)convertView.findViewById(R.id.note_group);
+				TextView noteTime = (TextView)convertView.findViewById(R.id.note_time);
+				TextView noteStatus = (TextView)convertView.findViewById(R.id.note_status);
 				
-				gName.setText(g.getGroupname());
-				gPerm.setText(g.getPermissions().toString());
+				noteText.setText(n.getText());
+				noteGroup.setText(groupNames.get(n.getGid()));
+				noteTime.setText(n.getFormattedTime());
+				noteStatus.setText(n.getStatus().toString());
 			}
 			
 			return convertView;
@@ -220,13 +249,8 @@ public class GroupFragment extends Fragment implements ProgressCallback
 			else
 			{
 				ViewFlipper flipper = new ViewFlipper(getContext());
-				flipper.addView(clearFromParent(fragmentRows, fragmentRows.findViewById(R.id.fragment_group_info_row)));
-				
-				if (type == TYPE_INVITATION)
-					flipper.addView(clearFromParent(fragmentRows, fragmentRows.findViewById(R.id.fragment_group_invite_button_row)));
-				else
-					flipper.addView(clearFromParent(fragmentRows, fragmentRows.findViewById(R.id.fragment_group_group_button_row)));
-				
+				flipper.addView(clearFromParent(fragmentRows, fragmentRows.findViewById(R.id.fragment_notification_info_row)));
+				flipper.addView(clearFromParent(fragmentRows, fragmentRows.findViewById(R.id.fragment_notification_button_row)));			
 				find = flipper;
 			}
 			

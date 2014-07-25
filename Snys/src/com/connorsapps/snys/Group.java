@@ -2,24 +2,69 @@ package com.connorsapps.snys;
 
 import java.util.Locale;
 
-public class Group
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class Group implements Parcelable
 {
 	public static enum Permissions { MEMBER, CONTRIBUTOR, ADMIN };
+	public static final Parcelable.Creator<Group> CREATOR =
+			new Parcelable.Creator<Group>()
+			{
+
+				@Override
+				public Group createFromParcel(Parcel source)
+				{
+					return new Group(source);
+				}
+
+				@Override
+				public Group[] newArray(int size)
+				{
+					return new Group[size];
+				}
+		
+			};
 	
 	private int id;
 	private String groupname;
 	private Permissions permissions;
+	private boolean invitation;
 	
-	public Group(int id, String groupname, String permissions)
+	public Group(int id, String groupname, String permissions, boolean isInvitation)
 	{
-		this(id, groupname, toPermissions(permissions));
+		this(id, groupname, toPermissions(permissions), isInvitation);
 	}
 	
-	public Group(int id, String groupname, Permissions perm)
+	public Group(int id, String groupname, Permissions perm, boolean isInvitation)
 	{
 		this.setId(id);
 		this.setGroupname(groupname);
 		this.setPermissions(perm);
+		this.setInvitation(isInvitation);
+	}
+	
+	public Group(Parcel in)
+	{
+		this(in.readInt(),
+			in.readString(),
+			(Permissions)in.readSerializable(),
+			in.readByte() != 0);
+	}
+	
+	@Override
+	public int describeContents()
+	{
+		return 0;
+	}
+	
+	@Override
+	public void writeToParcel(Parcel out, int flags)
+	{
+		out.writeInt(id);
+		out.writeString(groupname);
+		out.writeSerializable(permissions);
+		out.writeByte((byte)(invitation ? 1 : 0));
 	}
 	
 	/**
@@ -69,6 +114,16 @@ public class Group
 		this.permissions = permissions;
 	}
 	
+	public boolean isInvitation()
+	{
+		return invitation;
+	}
+
+	public void setInvitation(boolean isInvitation)
+	{
+		this.invitation = isInvitation;
+	}
+
 	public String toString()
 	{
 		return "Group {id = " + id + ", groupname = \"" + groupname + "\", permissions = " + permissions + "}";

@@ -4,5 +4,7 @@
     <string name="app_name">Snys</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_logout">Log out</string>
+    <string name="title_activity_group">GroupActivity</string>
+    <string name="action_settings">Settings</string>
 
 </resources>

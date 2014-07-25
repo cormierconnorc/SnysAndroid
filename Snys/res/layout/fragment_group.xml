@@ -5,7 +5,8 @@
     <ListView
         android:id="@+id/sexy_group_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
+        android:layout_height="match_parent"
+        android:background="#FFFFFF">
     </ListView>
 
 </FrameLayout>
