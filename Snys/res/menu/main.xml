@@ -16,8 +16,14 @@
         app:showAsAction="never"/>
     
     <item
-        android:id="@+id/action_quit"
+        android:id="@+id/action_refresh"
         android:orderInCategory="300"
+        android:title="Refresh"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/action_quit"
+        android:orderInCategory="400"
         android:title="Quit"
         app:showAsAction="never"/>
 

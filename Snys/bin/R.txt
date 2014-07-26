@@ -252,7 +252,8 @@ int id action_logout 0x7f050075
 int id action_menu_divider 0x7f050016
 int id action_menu_presenter 0x7f050017
 int id action_mode_close_button 0x7f050024
-int id action_quit 0x7f050077
+int id action_quit 0x7f050078
+int id action_refresh 0x7f050077
 int id action_submit 0x7f050076
 int id activity_chooser_view_content 0x7f050025
 int id always 0x7f05000b
@@ -279,13 +280,13 @@ int id confirm_pass 0x7f05006e
 int id default_activity_button 0x7f050028
 int id delete_group_button 0x7f05005f
 int id delete_note_button 0x7f050067
-int id delete_option 0x7f050079
+int id delete_option 0x7f05007a
 int id deny_invite_button 0x7f050062
 int id dialog 0x7f05000e
 int id disableHome 0x7f050008
 int id dropdown 0x7f05000f
 int id edit_note_button 0x7f050066
-int id edit_option 0x7f050078
+int id edit_option 0x7f050079
 int id edit_query 0x7f050030
 int id email 0x7f050068
 int id end 0x7f050013

@@ -1,6 +1,7 @@
 package com.connorsapps.snys;
 
 import java.io.IOException;
+import java.util.List;
 
 import android.content.DialogInterface;
 import android.database.sqlite.SQLiteDatabase;
@@ -97,6 +98,15 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		case R.id.action_logout: 
 			logout();
 			return true;
+		case R.id.action_submit:
+			this.onCreateNewNotification();
+			return true;
+		case R.id.action_quit:
+			this.exitAll();
+			return true;
+		case R.id.action_refresh:
+			this.onSuccessfulLogin();
+			return true;
 		}
 		
 		return super.onOptionsItemSelected(item);
@@ -124,6 +134,40 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			protected void onPostExecute(Void res)
 			{
 				tryLogin();
+			}
+			
+		}.execute();
+	}
+	
+	/**
+	 * Close all of this program
+	 */
+	public void exitAll()
+	{
+		//Will also close background threads in future
+		this.finish();
+	}
+	
+	/**
+	 * Prompt the user to select a group to submit to,
+	 * creating a dialog that will transition to the
+	 * note activity
+	 */
+	public void onCreateNewNotification()
+	{
+		new AsyncTask<Void, Void, List<Group>>()
+		{
+			@Override
+			protected List<Group> doInBackground(Void... arg0)
+			{
+				//Get the relevant groups out of the database
+				return db.getSubmittableGroups();
+			}
+			
+			@Override
+			protected void onPostExecute(List<Group> relevant)
+			{
+				new SubmitToDialogFragment(relevant).show(getSupportFragmentManager(), "GroupPrompt");
 			}
 			
 		}.execute();

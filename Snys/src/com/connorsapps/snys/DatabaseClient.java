@@ -177,6 +177,16 @@ public class DatabaseClient
 	}
 	
 	/**
+	 * Get groups this user has the right to submit to
+	 * @return
+	 */
+	public List<Group> getSubmittableGroups()
+	{
+		return this.getGroups(Groups.COLUMN_PERMISSIONS + " != ?", 
+				new String[] {Group.Permissions.MEMBER.toString()});
+	}
+	
+	/**
 	 * Get a single group out of database
 	 * @param gid
 	 * @return Group if it exists, null otherwise

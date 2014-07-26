@@ -3,6 +3,8 @@ package com.connorsapps.snys;
 import java.io.IOException;
 import java.util.Arrays;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
@@ -335,6 +337,10 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback
 						note.getStatus() == Notification.Status.UNHANDLED && 
 						updated.getStatus() != Notification.Status.UNHANDLED)
 				{
+					//Update only the relevant fields
+					note.setStatus(updated.getStatus());
+					note.setRemindAt(updated.getRemindAt());
+					
 					loadSpinnerAdapter();
 				}
 				
@@ -480,5 +486,29 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback
 	public void endProgress()
 	{
 		this.setProgressBarIndeterminate(false);
+	}
+	
+	/**
+	 * Get an intent to transition to this activity with a new note
+	 * @param from Activity to start intent from
+	 * @param toGroup Group to submit to
+	 * @return
+	 */
+	public static void transitionToNewNote(Activity from, Group toGroup)
+	{
+		//Transition to the noteactivity
+		Intent note = new Intent(from, NoteActivity.class);
+
+		long refTime = System.currentTimeMillis();
+		Notification nNote = new Notification(-1, toGroup.getId(), "", refTime,
+				Notification.Status.UNHANDLED, refTime);
+
+		// Put extras in bundle
+		note.putExtra(NoteActivity.GROUP_KEY, toGroup);
+		note.putExtra(NoteActivity.NOTE_KEY, nNote);
+		note.putExtra(NoteActivity.EDIT_KEY, true);
+		note.putExtra(NoteActivity.INITIAL_KEY, true);
+		
+		from.startActivity(note);
 	}
 }

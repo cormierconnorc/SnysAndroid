@@ -1,6 +1,7 @@
 package com.connorsapps.snys;
 
 import android.support.v7.app.ActionBarActivity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -106,10 +107,19 @@ public class GroupActivity extends ActionBarActivity
 		case R.id.option_group_leave:
 			return true;
 		case R.id.option_group_submit:
+			submitToGroup();
 			return true;
 		case R.id.option_group_delete:
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+	
+	/**
+	 * Submit a note to this group
+	 */
+	public void submitToGroup()
+	{
+		NoteActivity.transitionToNewNote(this, myGroup);
 	}
 }
