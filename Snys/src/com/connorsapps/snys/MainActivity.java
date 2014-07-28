@@ -26,7 +26,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	public static String AUTHORITY = "com.connorsapps.snys.provider";
 	public static String ACCOUNT_TYPE = "raspbi.mooo.com/snys";
 	public static String ACCOUNT = "dummyaccount";
-	public static long SYNC_REFRESH_PERIOD = 30 * 60;	//Sync in background every 30 minutes.
+	public static long SYNC_REFRESH_PERIOD = 60; //30 * 60;	//Sync in background every 30 minutes.
 	public static long WAIT_TIME = 10;
 	private static NetworkManager netMan;
 	private static DatabaseClient db;
@@ -107,10 +107,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 				android.R.layout.simple_list_item_1, 
 				android.R.id.text1, 
 				options);
-		
-		//Set selected on start.
-		action.setSelectedNavigationItem(this.showNotificationsOnStart ? 1 : 0);
-		
+
 		//Set adapter and callback
 		action.setListNavigationCallbacks(ada, new ActionBar.OnNavigationListener(){
 
@@ -122,10 +119,13 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 				else
 					showNotifications();
 				
-				return false;
+				return true;
 			}
 			
 		});
+		
+		//Set selected on start.
+		action.setSelectedNavigationItem(this.showNotificationsOnStart ? 1 : 0);
 	}
 
 	@Override
@@ -247,6 +247,18 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		//Only do this if not started from notification:
 		if (this.refreshNetworkOnStart)
 			tryLogin();
+		else
+		{
+			//Set network manager credentials from db and move on
+			new Thread(new Runnable() 
+			{
+				@Override
+				public void run()
+				{
+					netMan.setCredentials(MainActivity.db.getCredentials());
+				}
+			}).start();
+		}
 	}
 	
 	public void createFragments()
@@ -308,8 +320,11 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	}
 	
 	public void onSuccessfulRefresh()
-	{
+	{		
 		showSelected();
+		
+		//Now force the visible fragment to reload
+		refreshSelected();
 	}
 	
 	public void onUnsuccessfulRefresh(String error)
@@ -418,39 +433,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	
 	public void onRefresh()
 	{
-		//Custom callback to handle refreshes
-		RefreshDataTask.Callback callback = new RefreshDataTask.Callback()
-		{
-			
-			@Override
-			public void startProgress()
-			{
-				MainActivity.this.startProgress();
-			}
-			
-			@Override
-			public void endProgress()
-			{
-				MainActivity.this.endProgress();
-			}
-			
-			@Override
-			public void onUnsuccessfulRefresh(String error)
-			{
-				MainActivity.this.onUnsuccessfulRefresh(error);
-			}
-			
-			@Override
-			public void onSuccessfulRefresh()
-			{
-				MainActivity.this.onSuccessfulRefresh();
-				
-				//Now force the visible fragment to reload
-				refreshSelected();
-			}
-		};
-		
-		new RefreshDataTask(callback, netMan, db).execute();
+		this.onSuccessfulLogin();
 	}
 	
 	/**
