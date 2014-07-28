@@ -204,7 +204,7 @@ public class NetworkManager
 	 * @return
 	 * @throws IOException
 	 */
-	public Notification[] getNotifications() throws IOException
+	public List<Notification> getNotifications() throws IOException
 	{
 		String strInfo = this.doGet("/notifications", this.credentials.toQuery());		
 		
@@ -239,21 +239,18 @@ public class NetworkManager
 				throw new IOException("Bad credentials!");
 			}
 		}
-		
-		//Move to static array for consistency
-		Notification[] notifications = new Notification[notes.size()];
-		notes.toArray(notifications);
-		return notifications;
+	
+		return notes;
 	}
 	
-	private Group[] toGroups(String str, boolean isInvitation)
+	private List<Group> toGroups(String str, boolean isInvitation)
 	{
 		InternalMembership[] groups = gson.fromJson(str, InternalMembership[].class);
 		
-		Group[] rGroups = new Group[groups.length];
+		List<Group> rGroups = new ArrayList<Group>(groups.length);
 		
 		for (int i = 0; i < groups.length; i++)
-			rGroups[i] = groups[i].toGroup(isInvitation);
+			rGroups.add(groups[i].toGroup(isInvitation));
 		
 		return rGroups;
 	}
@@ -263,7 +260,7 @@ public class NetworkManager
 	 * @return
 	 * @throws IOException
 	 */
-	public Group[] getGroups() throws IOException
+	public List<Group> getGroups() throws IOException
 	{
 		String str = this.doGet("/groups", this.credentials.toQuery());
 		
@@ -275,7 +272,7 @@ public class NetworkManager
 	 * @return
 	 * @throws IOException
 	 */
-	public Group[] getInvitations() throws IOException
+	public List<Group> getInvitations() throws IOException
 	{
 		String str = this.doGet("/invitations", this.credentials.toQuery());
 		

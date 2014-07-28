@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -42,15 +43,8 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		//Get the group argument (determines which notifications to show)
 		gid = this.getArguments().getInt(GID_KEY, -1);
 		
-		//Open database in background
-		new Thread(new Runnable()
-		{
-			public void run()
-			{
-				// Open the database
-				db = new DatabaseClient(new SnysDbHelper(NoteFragment.this.getActivity()).getWritableDatabase());
-			}
-		}).start();
+		//Get reference to this application's database (poor design, but less wasted memory than opening a new one in each fragment)
+		this.db = MainActivity.getDatabase();
 	}
 	
 	@Override
@@ -74,6 +68,59 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	{
 		super.onStart();
 		
+		loadData();
+		//loadFromCache();
+	}
+	
+//	public void loadFromCache()
+//	{
+//		//Alternative using caches
+//		List<Object> data = new ArrayList<Object>();
+//		
+//		List<Notification> pending = MainActivity.getPendingCache(), handled = MainActivity.getHandledCache();
+//		groupsMap = new TreeMap<Integer, Group>();
+//
+//		// Filter if gid
+//		if (gid != -1)
+//		{
+//			List<Notification> nPend = new ArrayList<Notification>(), nHand = new ArrayList<Notification>();
+//			
+//			for (Notification note : pending)
+//			{
+//				if (note.getGid() == gid)
+//					nPend.add(note);
+//			}
+//			
+//			for (Notification note : handled)
+//			{
+//				if (note.getGid() == gid)
+//					nHand.add(note);
+//			}
+//			
+//			pending = nPend;
+//			handled = nHand;
+//			
+//			for (Group g : MainActivity.getGroupCache())
+//				if (g.getId() == gid)
+//					groupsMap.put(gid, g);
+//		}
+//		else
+//		{
+//			for (Group g : MainActivity.getGroupCache())
+//				groupsMap.put(g.getId(), g);
+//		}
+//
+//
+//		data.add("Pending:");
+//		data.addAll(pending);
+//		data.add("Handled:");
+//		data.addAll(handled);
+//		
+//		list.setAdapter(new NoteAdapter(getActivity(), data));
+//	}
+	
+	public void loadData()
+	{
 		//Start data loading (now in onStart so data is refreshed each time fragment shows)
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
@@ -155,15 +202,13 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	@Override
 	public void startProgress()
 	{
-		root.removeAllViews();
 		root.addView(progress);
 	}
 
 	@Override
 	public void endProgress()
 	{
-		root.removeAllViews();
-		root.addView(list);
+		root.removeView(progress);
 	}
 	
 	private class LoadDataTask extends AsyncTask<Void, Void, List<Object>>
@@ -176,20 +221,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 
 		@Override
 		protected List<Object> doInBackground(Void... arg0)
-		{
-			//Wait for database to open (just a precaution)
-			while (db == null)
-			{
-				try
-				{
-					Thread.sleep(50);
-				}
-				catch (InterruptedException e)
-				{
-					e.printStackTrace();
-				}
-			}
-			
+		{		
 			List<Notification> pending, handled;
 			
 			if (gid != -1)
@@ -219,7 +251,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 			data.addAll(pending);
 			data.add("Handled:");
 			data.addAll(handled);
-		
+			
 			return data;
 		}
 		

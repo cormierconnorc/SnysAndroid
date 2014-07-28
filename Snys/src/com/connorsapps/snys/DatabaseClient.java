@@ -227,6 +227,41 @@ public class DatabaseClient
 	}
 	
 	/**
+	 * Delete a single group
+	 * @param gid gid of group to delete
+	 */
+	public void deleteGroup(int gid)
+	{
+		db.delete(Groups.TABLE_NAME, Groups._ID + " = ?", new String[] {String.valueOf(gid)});
+	}
+	
+	/**
+	 * Accept an invitation to a group
+	 * @param gid
+	 */
+	public void acceptInvitation(int gid)
+	{
+		//Values to update
+		ContentValues values = new ContentValues();
+		values.put(Groups.COLUMN_IS_INVITATION, 0);
+		
+		//Row
+		String selection = Groups._ID + " = ?";
+		String[] args = {String.valueOf(gid)};
+		
+		db.update(Groups.TABLE_NAME, values, selection, args);
+	}
+	
+	/**
+	 * Added for symmetry, simply deletes a group
+	 * @param gid
+	 */
+	public void denyInvitation(int gid)
+	{
+		this.deleteGroup(gid);
+	}
+	
+	/**
 	 * Insert multiple notifications into the database
 	 * @param notifications
 	 */

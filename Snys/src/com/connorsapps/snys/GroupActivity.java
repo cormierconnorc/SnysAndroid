@@ -1,15 +1,16 @@
 package com.connorsapps.snys;
 
-import android.support.v7.app.ActionBarActivity;
-import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class GroupActivity extends ActionBarActivity
+public class GroupActivity extends ActionBarActivity implements GroupUtils.Callback
 {
 	public static final String GROUP_KEY = "com.connorsapps.snys.GroupActivity.myGroup";
 	private Group myGroup;
+	private NoteFragment frag;
+	private GroupUtils utils;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -28,12 +29,14 @@ public class GroupActivity extends ActionBarActivity
 		
 		if (savedInstanceState == null)
 			loadNoteFragment();
+		
+		utils = new GroupUtils(this, getSupportFragmentManager());
 	}
 	
 	public void loadNoteFragment()
 	{
 		//Create fragment with args
-		NoteFragment frag = new NoteFragment();
+		frag = new NoteFragment();
 		Bundle args = new Bundle();
 		args.putInt(NoteFragment.GID_KEY, myGroup.getId());
 		frag.setArguments(args);
@@ -99,17 +102,23 @@ public class GroupActivity extends ActionBarActivity
 		case android.R.id.home:
 			this.finish();
 			return true;
-		//TODO proper option handling
 		case R.id.option_invite_deny:
+			utils.deny(myGroup);
 			return true;
 		case R.id.option_invite_accept:
+			utils.accept(myGroup);
 			return true;
 		case R.id.option_group_leave:
+			utils.leave(myGroup);
+			return true;
+		case R.id.option_group_invite:
+			utils.invite(myGroup);
 			return true;
 		case R.id.option_group_submit:
 			submitToGroup();
 			return true;
 		case R.id.option_group_delete:
+			utils.delete(myGroup);
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -121,5 +130,47 @@ public class GroupActivity extends ActionBarActivity
 	public void submitToGroup()
 	{
 		NoteActivity.transitionToNewNote(this, myGroup);
+	}
+
+	@Override
+	public void startProgress()
+	{
+		frag.startProgress();
+	}
+
+	@Override
+	public void endProgress()
+	{
+		frag.endProgress();
+	}
+
+	@Override
+	public void onInviteAccepted()
+	{
+		frag.loadData();
+	}
+
+	@Override
+	public void onInviteDenied()
+	{
+		finish();
+	}
+
+	@Override
+	public void onGroupLeft()
+	{
+		finish();
+	}
+
+	@Override
+	public void onGroupDeleted()
+	{
+		finish();
+	}
+
+	@Override
+	public void onInviteSent()
+	{
+		//Do nothing
 	}
 }

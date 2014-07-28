@@ -16,8 +16,11 @@ import android.widget.ArrayAdapter;
 
 public class MainActivity extends ActionBarActivity implements LoginTask.LoginCallback, OpenDbTask.DbCallback
 {
-	private NetworkManager netMan;
-	private DatabaseClient db;
+	public static long WAIT_TIME = 10;
+	private static NetworkManager netMan;
+	private static DatabaseClient db;
+//	private static List<Notification> uNoteCache, hNoteCache;
+//	private static List<Group> groupCache, inviteCache;
 	private ProgressFragment curProgFrag;
 	private NoteFragment noteFrag;
 	private GroupFragment groupFrag;
@@ -25,7 +28,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{		
-		super.onCreate(savedInstanceState);		
+		super.onCreate(savedInstanceState);
 		
 		//Just a fragment container
 		setContentView(R.layout.activity_main);
@@ -33,22 +36,22 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		//Set up dropdown navigation
 		setupDropdown();
 		
-		this.netMan = new NetworkManager();
+		netMan = new NetworkManager();
+		
+		//Create progress fragment which, unlike other fragments
+		//does not depend on having an open database
+		curProgFrag = new ProgressFragment();
+		
+//		//Create cache lists (used to minimize database reads)
+//		uNoteCache = new ArrayList<Notification>();
+//		hNoteCache = new ArrayList<Notification>();
+//		groupCache = new ArrayList<Group>();
+//		inviteCache = new ArrayList<Group>();
 		
 		//Open database in background
 		SnysDbHelper helper = new SnysDbHelper(this.getApplicationContext());
 		OpenDbTask opener = new OpenDbTask(this);
 		opener.execute(helper);
-		
-		//Create fragments
-		noteFrag = new NoteFragment();
-		//Empty bundle for arguments
-		Bundle args = new Bundle();
-		noteFrag.setArguments(args);
-
-		groupFrag = new GroupFragment();
-		
-		curProgFrag = new ProgressFragment();
 	}
 	
 	public void setupDropdown()
@@ -190,9 +193,23 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	public void onDatabaseOpened(SQLiteDatabase db)
 	{
 		//Set database
-		this.db = new DatabaseClient(db);
+		MainActivity.db = new DatabaseClient(db);
+		
+		//Fragments depend on open db, so only create them here
+		createFragments();
 		
 		tryLogin();
+	}
+	
+	public void createFragments()
+	{
+		//Create fragments dependent on open database
+		noteFrag = new NoteFragment();
+		//Empty bundle for arguments
+		Bundle args = new Bundle();
+		noteFrag.setArguments(args);
+
+		groupFrag = new GroupFragment();
 	}
 	
 	/**
@@ -253,6 +270,12 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 					//Get information off of server
 					NetworkManager.Information info = netMan.getInfo();
 					
+//					//Set up caches
+//					uNoteCache.addAll(info.pending);
+//					hNoteCache.addAll(info.handled);
+//					groupCache.addAll(info.memberships);
+//					inviteCache.addAll(info.invitations);
+					
 					//Clear out the old stuff (since this is a full update)
 					//This is inefficient, of course, but the server currently
 					//lacks the ability to send "update chunks" or some similar shit.
@@ -260,6 +283,12 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 					db.deleteNotifications();
 					
 					//Now put it into the database
+					//Note: ORDER DOES MATTER HERE. Memberships
+					//must be added before invitations to ensure
+					//that invitation to a group the user is already
+					//in are disregarded. This oddity is due to the
+					//difference in the way data is stored locally
+					//and on the server.
 					db.insertGroups(info.memberships);
 					db.insertInvitations(info.invitations);
 					db.insertNotifications(info.handled);
@@ -421,22 +450,85 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	
 	public void showGroups()
 	{
+		if (groupFrag == null)
+			return;
+		
 		//Create fragment and add
 		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, groupFrag).commit();
 	}
 	
 	public void showNotifications()
 	{	
+		if (noteFrag == null)
+			return;
+		
 		getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, noteFrag).commit();
 	}
 
-	public NetworkManager getNetworkManager()
+	/**
+	 * Get the network manager for this application
+	 * @return
+	 */
+	public static NetworkManager getNetworkManager()
 	{
+		//Block while network manager is null
+		while (netMan == null)
+		{
+			threadWait();
+		}
+		
 		return netMan;
 	}
 	
-	public DatabaseClient getDatabase()
+	/**
+	 * Get the databse for this application
+	 * @return
+	 */
+	public static DatabaseClient getDatabase()
 	{
+		//Block while database is null
+		while (db == null)
+		{
+			threadWait();
+		}
+		
 		return db;
 	}
+	
+	public static void threadWait()
+	{
+		threadWait(WAIT_TIME);
+	}
+	
+	public static void threadWait(long time)
+	{
+		try
+		{
+			Thread.sleep(time);
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
+//	public static List<Group> getGroupCache()
+//	{
+//		return groupCache;
+//	}
+//	
+//	public static List<Group> getInviteCache()
+//	{
+//		return inviteCache;
+//	}
+//	
+//	public static List<Notification> getPendingCache()
+//	{
+//		return uNoteCache;
+//	}
+//	
+//	public static List<Notification> getHandledCache()
+//	{
+//		return hNoteCache;
+//	}
 }

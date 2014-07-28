@@ -10,7 +10,7 @@ import com.connorsapps.snys.SnysContract.Notifications;
 
 public class SnysDbHelper extends SQLiteOpenHelper
 {
-	public static final int DATABASE_VERSION = 1;
+	public static final int DATABASE_VERSION = 2;
 	public static final String DATABASE_NAME = "Snys.db";
 	
 	private static final String CREATE_TABLE_ACCOUNT = 
@@ -21,7 +21,7 @@ public class SnysDbHelper extends SQLiteOpenHelper
 	
 	private static final String CREATE_TABLE_GROUPS =
 			"CREATE TABLE " + Groups.TABLE_NAME + " (" +
-			Groups._ID + " INTEGER PRIMARY KEY," + 
+			Groups._ID + " INTEGER PRIMARY KEY ON CONFLICT IGNORE," + //Keep current value. No invitations replacing memberships. Must leave and be reinvited to change permissions.
 			Groups.COLUMN_GROUPNAME + " TEXT," +
 			Groups.COLUMN_PERMISSIONS + " TEXT," +
 			Groups.COLUMN_IS_INVITATION + " TEXT )";

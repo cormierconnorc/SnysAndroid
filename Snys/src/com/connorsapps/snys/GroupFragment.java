@@ -1,5 +1,6 @@
 package com.connorsapps.snys;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,16 +19,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
 
-public class GroupFragment extends Fragment implements ProgressCallback
+public class GroupFragment extends Fragment implements ProgressCallback, CreateGroupDialogFragment.Callback, GroupUtils.Callback
 {
 	private ListView myList;
 	private ViewGroup root, progress;
 	private DatabaseClient db;
 	private MenuItem createGroup;
+	private NetworkManager netMan;
+	private GroupUtils utils;
 	
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saved)
 	{	
@@ -41,16 +45,14 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		myList = (ListView)root.findViewById(R.id.sexy_group_view);
 		
 		setupTouch(myList);
+	
+		//Open the database
+		db = MainActivity.getDatabase();
 		
-		//Open database in background
-		new Thread(new Runnable() 
-		{
-			public void run()
-			{
-				//Open the database
-				db = new DatabaseClient(new SnysDbHelper(GroupFragment.this.getActivity()).getWritableDatabase());
-			}
-		}).start();
+		//And create the network manager
+		netMan = MainActivity.getNetworkManager();
+		
+		utils = new GroupUtils(this, getActivity().getSupportFragmentManager());
 		
 		return root;
 	}
@@ -66,8 +68,7 @@ public class GroupFragment extends Fragment implements ProgressCallback
 	{
 		if (item.getItemId() == createGroup.getItemId())
 		{
-			//TODO create CreateGroupDialogFragment
-			//new CreateGroupDialogFragment(db).show(getActivity().getSupportFragmentManager(), "CreateFrag"); 
+			new CreateGroupDialogFragment(this).show(getActivity().getSupportFragmentManager(), "CreateFrag"); 
 			return true;
 		}
 		
@@ -80,6 +81,11 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		super.onStart();
 		
 		//Start data loading (now in onStart so data is refreshed each time fragment shows)
+		loadData();
+	}
+	
+	public void loadData()
+	{
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
 	}
@@ -130,15 +136,65 @@ public class GroupFragment extends Fragment implements ProgressCallback
 	@Override
 	public void startProgress()
 	{
-		root.removeAllViews();
 		root.addView(progress);
 	}
 
 	@Override
 	public void endProgress()
 	{
-		root.removeAllViews();
-		root.addView(myList);
+		root.removeView(progress);
+	}
+	
+	@Override
+	public void onCreateGroup(String name)
+	{
+		new AsyncTask<String, Void, Group>()
+		{
+			@Override
+			protected void onPreExecute()
+			{
+				startProgress();
+			}
+
+			@Override
+			protected Group doInBackground(String... arg0)
+			{
+				String name = arg0[0];
+				
+				try
+				{
+					Group newGroup = netMan.createGroup(name);
+					
+					//Insert group into database
+					db.insertGroup(newGroup);
+					
+					return newGroup;
+				}
+				catch (IOException e)
+				{
+					return null;
+				}
+			}
+			
+			@Override
+			protected void onPostExecute(Group newGroup)
+			{
+				endProgress();
+				
+				if (newGroup == null)
+				{
+					new GenericDialogFragment("Could not reach server!", 
+							"Group will not persist :(", 
+							android.R.drawable.ic_dialog_alert, null).show(getActivity().getSupportFragmentManager(), "SadFrag");
+				}
+				else
+				{
+					//Reload
+					loadData();
+				}
+			}
+			
+		}.execute(name);
 	}
 	
 	private class LoadDataTask extends AsyncTask<Void, Void, List<Object>>
@@ -151,20 +207,7 @@ public class GroupFragment extends Fragment implements ProgressCallback
 		
 		@Override
 		protected List<Object> doInBackground(Void... arg0)
-		{
-			//Wait for database to open (just a precaution)
-			while (db == null)
-			{
-				try
-				{
-					Thread.sleep(50);
-				}
-				catch (InterruptedException e)
-				{
-					e.printStackTrace();
-				}
-			}
-			
+		{			
 			//Read data from database
 			List<Object> data = new ArrayList<Object>();
 			data.add("Groups:");
@@ -236,15 +279,101 @@ public class GroupFragment extends Fragment implements ProgressCallback
 				TextView title = (TextView)convertView.findViewById(R.id.section_title);
 				title.setText((String)itm);
 			}
-			//TODO split up (when button row and touch added)
 			else
 			{
-				Group g = (Group)itm;
+				final Group g = (Group)itm;
 				TextView gName = (TextView)convertView.findViewById(R.id.groupname);
 				TextView gPerm = (TextView)convertView.findViewById(R.id.group_permissions);
 				
 				gName.setText(g.getGroupname());
 				gPerm.setText(g.getPermissions().toString());
+				
+				
+				//Now set up the button row listeners
+				if (type == TYPE_GROUP)
+				{
+					Button leave = (Button)convertView.findViewById(R.id.leave_group_button);
+					Button invite = (Button)convertView.findViewById(R.id.invite_to_group_button);
+					Button submit = (Button)convertView.findViewById(R.id.submit_to_group_button);
+					Button delete = (Button)convertView.findViewById(R.id.delete_group_button);
+					
+					//Disable buttons if permissions are not met
+					if (g.getPermissions() != Group.Permissions.ADMIN)
+					{
+						delete.setEnabled(false);
+						
+						if (g.getPermissions() != Group.Permissions.CONTRIBUTOR)
+						{
+							submit.setEnabled(false);
+						}
+					}
+					
+					//Now set these listeners as well
+					leave.setOnClickListener(new View.OnClickListener() {
+
+						@Override
+						public void onClick(View v)
+						{
+							utils.leave(g);
+						}
+						
+					});
+					
+					invite.setOnClickListener(new View.OnClickListener() {
+
+						@Override
+						public void onClick(View v)
+						{
+							utils.invite(g);
+						}
+						
+					});
+					
+					submit.setOnClickListener(new View.OnClickListener() {
+
+						@Override
+						public void onClick(View v)
+						{
+							NoteActivity.transitionToNewNote(getActivity(), g);
+						}
+						
+					});
+					
+					delete.setOnClickListener(new View.OnClickListener() {
+
+						@Override
+						public void onClick(View v)
+						{
+							utils.delete(g);
+						}
+						
+					});					
+				}
+				else
+				{
+					Button accept = (Button)convertView.findViewById(R.id.accept_invite_button);
+					Button deny = (Button)convertView.findViewById(R.id.deny_invite_button);
+					
+					accept.setOnClickListener(new View.OnClickListener() {
+
+						@Override
+						public void onClick(View v)
+						{
+							utils.accept(g);
+						}
+						
+					});
+					
+					deny.setOnClickListener(new View.OnClickListener() {
+
+						@Override
+						public void onClick(View v)
+						{
+							utils.deny(g);
+						}
+						
+					});
+				}
 			}
 			
 			return convertView;
@@ -283,5 +412,35 @@ public class GroupFragment extends Fragment implements ProgressCallback
 			
 			return find;
 		}
+	}
+
+	@Override
+	public void onInviteAccepted()
+	{
+		loadData();
+	}
+
+	@Override
+	public void onInviteDenied()
+	{
+		loadData();
+	}
+
+	@Override
+	public void onGroupLeft()
+	{
+		loadData();
+	}
+
+	@Override
+	public void onGroupDeleted()
+	{
+		loadData();
+	}
+
+	@Override
+	public void onInviteSent()
+	{
+		//Do nothing
 	}
 }

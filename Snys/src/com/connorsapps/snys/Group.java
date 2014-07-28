@@ -83,6 +83,24 @@ public class Group implements Parcelable
 			return Permissions.MEMBER;
 		}
 	}
+	
+	/**
+	 * Convert from local representation to server's
+	 * @param perm
+	 * @return
+	 */
+	public static String fromPermissions(Permissions perm)
+	{
+		switch (perm)
+		{
+		case ADMIN:
+			return "Admin";
+		case CONTRIBUTOR:
+			return "Contributor";
+		default:
+			return "Member";
+		}
+	}
 
 	public int getId()
 	{

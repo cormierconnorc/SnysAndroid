@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -82,20 +83,8 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback
 		this.editMode = this.getIntent().getExtras().getBoolean(EDIT_KEY);
 		this.initialSubmit = this.getIntent().getExtras().getBoolean(INITIAL_KEY);
 
-		// Open database (no need for asynctask since gui doesn't need to be
-		// updated, this doesn't require a progress indicator)
-		new Thread(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				NoteActivity.this.db = new DatabaseClient(new SnysDbHelper(
-						NoteActivity.this).getWritableDatabase());
-				//TODO get existing network manager to remove unnecessary db operations.
-				netMan = new NetworkManager(db.getCredentials());
-			}
-
-		}).start();
+		this.db = MainActivity.getDatabase();
+		this.netMan = MainActivity.getNetworkManager();
 	}
 	
 	public void loadGui()
@@ -363,7 +352,12 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback
 					
 					//Cheer
 					new GenericDialogFragment("Successfully saved note", "Updates will persist.", android.R.drawable.ic_dialog_info, null)
-							.show(getSupportFragmentManager(), "GoodMessage");
+					{
+						public void onCancel(DialogInterface dialSoap)
+						{
+							finish();
+						}
+					}.show(getSupportFragmentManager(), "GoodMessage");
 				}
 			}
 			
