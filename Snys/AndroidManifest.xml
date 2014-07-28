@@ -5,10 +5,17 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="8"
+        android:minSdkVersion="11"
         android:targetSdkVersion="21" />
 
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission 
+        	android:name="android.permission.INTERNET" />
+    <uses-permission
+            android:name="android.permission.READ_SYNC_SETTINGS"/>
+    <uses-permission
+            android:name="android.permission.WRITE_SYNC_SETTINGS"/>
+    <uses-permission
+            android:name="android.permission.AUTHENTICATE_ACCOUNTS"/>
 
     <application
         android:allowBackup="true"
@@ -35,6 +42,38 @@
             android:name=".NoteActivity"
             android:label="@string/title_activity_note" >
         </activity>
+        
+    
+        <service
+            android:name=".StubAuthenticatorService"
+            android:exported="false"
+            android:enabled="true">
+        	<intent-filter>
+            	<action android:name="android.accounts.AccountAuthenticator"/>
+        	</intent-filter>
+        	<meta-data
+            	android:name="android.accounts.AccountAuthenticator"
+            	android:resource="@xml/stub_authenticator" />
+    	</service>
+    	
+        <provider
+        	android:name=".StubContentProvider"
+        	android:authorities="com.connorsapps.snys.provider"
+        	android:exported="false"
+        	android:syncable="true" />
+        
+        
+        <service
+                android:name=".SyncService"
+                android:exported="false"
+                android:process=":sync"
+                android:enabled="true">
+            <intent-filter>.provider
+                <action android:name="android.content.SyncAdapter"/>
+            </intent-filter>
+            <meta-data android:name="android.content.SyncAdapter"
+                    android:resource="@xml/syncadapter" />
+        </service>
     </application>
 
 </manifest>

@@ -3,12 +3,17 @@ package com.connorsapps.snys;
 import java.io.IOException;
 import java.util.List;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
@@ -18,6 +23,10 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 {
 	public static final String REFRESH_NETWORK_ON_START_KEY = "com.connorsapps.snys.MainActivity.refreshNetworkOnStart";
 	public static final String SHOW_NOTIFICATIONS_ON_START_KEY = "com.connorsapps.snys.MainActivity.showNotificationsOnStart";
+	public static String AUTHORITY = "com.connorsapps.snys.provider";
+	public static String ACCOUNT_TYPE = "raspbi.mooo.com/snys";
+	public static String ACCOUNT = "dummyaccount";
+	public static long SYNC_REFRESH_PERIOD = 30 * 60;	//Sync in background every 30 minutes.
 	public static long WAIT_TIME = 10;
 	private static NetworkManager netMan;
 	private static DatabaseClient db;
@@ -25,6 +34,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	private ProgressFragment curProgFrag;
 	private NoteFragment noteFrag;
 	private GroupFragment groupFrag;
+	private Account account;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -53,6 +63,36 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		SnysDbHelper helper = new SnysDbHelper(this.getApplicationContext());
 		OpenDbTask opener = new OpenDbTask(this);
 		opener.execute(helper);
+		
+		//Set up the SyncAdapter
+		account = createSyncAccount(this);
+		
+//		Bundle b = new Bundle();
+//		b.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
+//		b.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
+		
+		ContentResolver.setIsSyncable(account, AUTHORITY, 1);
+		ContentResolver.setSyncAutomatically(account, AUTHORITY, true);
+		//Immediate sync
+//		ContentResolver.requestSync(account, AUTHORITY, b);
+		
+		
+		//Now start it
+		ContentResolver.addPeriodicSync(account, AUTHORITY, Bundle.EMPTY, SYNC_REFRESH_PERIOD);
+	}
+	
+	public static Account createSyncAccount(Context context)
+	{
+		//Create the dummy account
+		Account nAc = new Account(ACCOUNT, ACCOUNT_TYPE);
+		
+		//Get the account manager
+		AccountManager am = (AccountManager)context.getSystemService(ACCOUNT_SERVICE);
+		
+		//Add the dummy account
+		am.addAccountExplicitly(nAc, null, null);
+		
+		return nAc;
 	}
 	
 	public void setupDropdown()
@@ -150,7 +190,10 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	 */
 	public void exitAll()
 	{
-		//Will also close background threads in future
+		//Stop sync adapter
+		ContentResolver.removePeriodicSync(account, AUTHORITY, new Bundle());
+		
+		//Shut down activity
 		this.finish();
 	}
 	
