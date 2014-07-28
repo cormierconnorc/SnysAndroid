@@ -16,15 +16,23 @@ public class DateTimeDialogFragment extends DialogFragment
 	private Button toSet;
 	private Calendar running;
 	private Calendar starting;
+	private boolean useLongFormat;
 	
 	public DateTimeDialogFragment(Button toSet)
 	{
+		this(toSet, true);
+	}
+	
+	public DateTimeDialogFragment(Button toSet, boolean useLongFormat)
+	{
+		this.useLongFormat = useLongFormat;
+		
 		this.toSet = toSet;
 		
 		//Create the starting calendar from the button's text
 		starting = Calendar.getInstance();
 		
-		long timeToSet = Notification.fromFormattedTime(toSet.getText().toString(), true);
+		long timeToSet = Notification.fromFormattedTime(toSet.getText().toString(), useLongFormat);
 		
 		//If time is in past, start where we are now.
 		if (timeToSet < System.currentTimeMillis())
@@ -109,7 +117,7 @@ public class DateTimeDialogFragment extends DialogFragment
 					long time = running.getTimeInMillis();
 					
 					//Now set the Button's text
-					toSet.setText(Notification.getFormattedTime(time, true));
+					toSet.setText(Notification.getFormattedTime(time, useLongFormat));
 				}
 			});
 			

@@ -395,10 +395,11 @@ int layout activity_note 0x7f03001a
 int layout fragment_group 0x7f03001b
 int layout fragment_progress 0x7f03001c
 int layout fragment_rows 0x7f03001d
-int layout invite_dialog 0x7f03001e
-int layout login_dialog 0x7f03001f
-int layout register_dialog 0x7f030020
-int layout support_simple_spinner_dropdown_item 0x7f030021
+int layout handle_dialog 0x7f03001e
+int layout invite_dialog 0x7f03001f
+int layout login_dialog 0x7f030020
+int layout register_dialog 0x7f030021
+int layout support_simple_spinner_dropdown_item 0x7f030022
 int menu group 0x7f0c0000
 int menu main 0x7f0c0001
 int menu note 0x7f0c0002

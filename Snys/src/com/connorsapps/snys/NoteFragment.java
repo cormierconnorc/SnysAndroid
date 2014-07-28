@@ -1,16 +1,21 @@
 package com.connorsapps.snys;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -20,18 +25,23 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
 
-public class NoteFragment extends Fragment implements ProgressCallback
+public class NoteFragment extends Fragment implements ProgressCallback, DeleteNoteTask.Callback
 {
 	public static final String GID_KEY = "com.connorsapps.NoteFragment.gid";
 	private int gid;
 	private ListView list;
 	private ViewGroup root, progress;
 	private DatabaseClient db;
+	private NetworkManager nm;
 	private Map<Integer, Group> groupsMap;
 	private MenuItem visibleToggle;
 	
@@ -45,6 +55,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		
 		//Get reference to this application's database (poor design, but less wasted memory than opening a new one in each fragment)
 		this.db = MainActivity.getDatabase();
+		this.nm = MainActivity.getNetworkManager();
 	}
 	
 	@Override
@@ -69,55 +80,7 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		super.onStart();
 		
 		loadData();
-		//loadFromCache();
 	}
-	
-//	public void loadFromCache()
-//	{
-//		//Alternative using caches
-//		List<Object> data = new ArrayList<Object>();
-//		
-//		List<Notification> pending = MainActivity.getPendingCache(), handled = MainActivity.getHandledCache();
-//		groupsMap = new TreeMap<Integer, Group>();
-//
-//		// Filter if gid
-//		if (gid != -1)
-//		{
-//			List<Notification> nPend = new ArrayList<Notification>(), nHand = new ArrayList<Notification>();
-//			
-//			for (Notification note : pending)
-//			{
-//				if (note.getGid() == gid)
-//					nPend.add(note);
-//			}
-//			
-//			for (Notification note : handled)
-//			{
-//				if (note.getGid() == gid)
-//					nHand.add(note);
-//			}
-//			
-//			pending = nPend;
-//			handled = nHand;
-//			
-//			for (Group g : MainActivity.getGroupCache())
-//				if (g.getId() == gid)
-//					groupsMap.put(gid, g);
-//		}
-//		else
-//		{
-//			for (Group g : MainActivity.getGroupCache())
-//				groupsMap.put(g.getId(), g);
-//		}
-//
-//
-//		data.add("Pending:");
-//		data.addAll(pending);
-//		data.add("Handled:");
-//		data.addAll(handled);
-//		
-//		list.setAdapter(new NoteAdapter(getActivity(), data));
-//	}
 	
 	public void loadData()
 	{
@@ -199,6 +162,70 @@ public class NoteFragment extends Fragment implements ProgressCallback
 		this.startActivity(notifiableIntent);
 	}
 	
+	/**
+	 * Handle an existing notification
+	 * @param n The notification
+	 */
+	public void handleNote(final Notification n)
+	{
+		//Do not continue if notification is unhandled.
+		if (n.getStatus() == Notification.Status.UNHANDLED)
+			return;
+		
+		new AsyncTask<Void, Void, Boolean>()
+		{
+			private String error;
+			
+			@Override
+			public void onPreExecute()
+			{
+				startProgress();
+			}
+			
+			@Override
+			protected Boolean doInBackground(Void... ns)
+			{
+				try
+				{
+					//Put notification in database first so updates persist locally.
+					db.insertNotification(n);
+					//Now update on server
+					nm.handleNote(n.getId(), n.getServerStatus(), n.getRemindAt());
+					
+					return true;
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+					error = "Could not reach server! Changes were saved locally but will not persist.";
+				}
+				catch (SnysException e)
+				{
+					error = e.getMessage();
+				}
+
+				return false;
+			}
+			
+			@Override
+			public void onPostExecute(Boolean result)
+			{
+				endProgress();
+				
+				if (result)
+				{
+					//Simply refersh on success
+					loadData();
+				}
+				else
+				{
+					new GenericDialogFragment("Failed to handle!", error, android.R.drawable.ic_dialog_alert, null)
+							.show(getActivity().getSupportFragmentManager(), "BadFrag");
+				}
+			}
+		}.execute();
+	}
+	
 	@Override
 	public void startProgress()
 	{
@@ -209,6 +236,13 @@ public class NoteFragment extends Fragment implements ProgressCallback
 	public void endProgress()
 	{
 		root.removeView(progress);
+	}
+	
+	@Override
+	public void onNoteDeleted()
+	{
+		//Refresh data on note deleted
+		this.loadData();
 	}
 	
 	private class LoadDataTask extends AsyncTask<Void, Void, List<Object>>
@@ -315,16 +349,178 @@ public class NoteFragment extends Fragment implements ProgressCallback
 			}
 			else
 			{
-				Notification n = (Notification)itm;
+				final Notification n = (Notification)itm;
+				final Group g = groupsMap.get(n.getGid());
 				TextView noteText = (TextView)convertView.findViewById(R.id.note_text);
 				TextView noteGroup = (TextView)convertView.findViewById(R.id.note_group);
 				TextView noteTime = (TextView)convertView.findViewById(R.id.note_time);
 				TextView noteStatus = (TextView)convertView.findViewById(R.id.note_status);
 				
 				noteText.setText(n.getText());
-				noteGroup.setText(groupsMap.get(n.getGid()).getGroupname());
+				noteGroup.setText(g.getGroupname());
 				noteTime.setText(Notification.getFormattedTime(n.getTime()));
 				noteStatus.setText(n.getStatus().toString());
+				
+				//Now setup the buttons
+				Button viewNote = (Button)convertView.findViewById(R.id.view_note_button);
+				Button handleNote = (Button)convertView.findViewById(R.id.handle_note_button);
+				Button editNote = (Button)convertView.findViewById(R.id.edit_note_button);
+				Button deleteNote = (Button)convertView.findViewById(R.id.delete_note_button);
+				
+				//Disable edit and delete buttons if you can't do that.
+				if (g.getPermissions() == Group.Permissions.MEMBER)
+				{
+					editNote.setEnabled(false);
+					deleteNote.setEnabled(false);
+				}
+				
+				//Listeners!
+				viewNote.setOnClickListener(new View.OnClickListener()
+				{
+					
+					@Override
+					public void onClick(View v)
+					{
+						Intent viewIntent = new Intent(getContext(), NoteActivity.class);
+						viewIntent.putExtra(NoteActivity.GROUP_KEY, g);
+						viewIntent.putExtra(NoteActivity.NOTE_KEY, n);
+						getActivity().startActivity(viewIntent);
+					}
+				});
+				
+				handleNote.setOnClickListener(new View.OnClickListener()
+				{
+					
+					@Override
+					public void onClick(View v)
+					{
+						new DialogFragment()
+						{
+							@Override
+							public Dialog onCreateDialog(Bundle saved)
+							{
+								AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+								
+								builder.setTitle("Change Reminder");
+								
+								ViewGroup root = (ViewGroup)getActivity().getLayoutInflater().inflate(R.layout.handle_dialog, null, false);
+								
+								//The spinner
+								final Spinner status = (Spinner)root.findViewById(R.id.an_status_spinner);
+								
+								final List<Notification.Status> stats = 
+										new ArrayList<Notification.Status>(Arrays.asList(Notification.Status.values()));
+								
+								if (n.getStatus() != Notification.Status.UNHANDLED)
+									stats.remove(Notification.Status.UNHANDLED);
+								
+								
+								ArrayAdapter<Notification.Status> ada = 
+										new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, stats);
+								
+								status.setAdapter(ada);							
+								
+								final ViewGroup remindAtRow = (ViewGroup)root.findViewById(R.id.an_remind_at_row);
+								final Button remindAt = (Button)root.findViewById(R.id.an_remind_time_selector_button);
+								
+								//Set button's initial text
+								remindAt.setText(Notification.getFormattedTime(n.getRemindAt(), false));
+								
+								//Set button's listener to create datetime dialog
+								remindAt.setOnClickListener(new View.OnClickListener() 
+								{
+									@Override
+									public void onClick(View v)
+									{
+										DateTimeDialogFragment dial = new DateTimeDialogFragment((Button)v, false);
+										dial.show(getActivity().getSupportFragmentManager(), "Selector");
+									}
+								});
+								
+								
+								status.setOnItemSelectedListener(new OnItemSelectedListener() 
+								{
+
+									@Override
+									public void onItemSelected(
+											AdapterView<?> parent, View sel,
+											int pos, long id)
+									{
+										Notification.Status nStat = stats.get(pos);
+										
+										if (nStat == Notification.Status.ALL ||
+											nStat == Notification.Status.JUST_EMAIL ||
+											nStat == Notification.Status.ALARM)
+										{
+											remindAtRow.setVisibility(View.VISIBLE);
+										}
+										else
+										{
+											remindAtRow.setVisibility(View.INVISIBLE);
+										}
+									}
+
+									@Override
+									public void onNothingSelected(
+											AdapterView<?> arg0)
+									{
+										// Do nothing
+									}
+									
+								});
+								
+								status.setSelection(stats.indexOf(n.getStatus()));
+								
+								builder.setView(root);
+								
+								builder.setPositiveButton("Save", new DialogInterface.OnClickListener()
+								{
+									@Override
+									public void onClick(DialogInterface dialog,
+											int which)
+									{
+										Notification.Status nStat = (Notification.Status)status.getSelectedItem();
+										long time = Notification.fromFormattedTime(remindAt.getText().toString(), false);
+										
+										n.setStatus(nStat);
+										n.setRemindAt(time);
+										
+										handleNote(n);
+									}
+								
+								});
+								
+								builder.setNegativeButton("Cancel", null);
+								
+								return builder.create();
+							}
+						}.show(getActivity().getSupportFragmentManager(), "PromptFrag");
+					}
+				});
+				
+				editNote.setOnClickListener(new View.OnClickListener()
+				{
+					
+					@Override
+					public void onClick(View v)
+					{
+						Intent viewIntent = new Intent(getContext(), NoteActivity.class);
+						viewIntent.putExtra(NoteActivity.GROUP_KEY, g);
+						viewIntent.putExtra(NoteActivity.NOTE_KEY, n);
+						viewIntent.putExtra(NoteActivity.EDIT_KEY, true);
+						getActivity().startActivity(viewIntent);
+					}
+				});
+				
+				deleteNote.setOnClickListener(new View.OnClickListener()
+				{
+					@Override
+					public void onClick(View v)
+					{
+						new DeleteNoteTask(NoteFragment.this, nm, db, getActivity().getSupportFragmentManager(), g, n).execute();
+					}
+				});
+					
 			}
 			
 			return convertView;

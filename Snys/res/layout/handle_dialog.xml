@@ -1,0 +1,56 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+    
+    <RelativeLayout
+        android:id="@+id/an_status_row"
+        android:layout_width="match_parent"
+        android:layout_height="50dp" >
+
+        <TextView
+            android:id="@+id/an_status_prompt"
+            android:layout_width="75dp"
+            android:layout_height="match_parent"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:text="Status:"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="#FF33B5E5" />
+
+        <Spinner
+            android:id="@+id/an_status_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="0dp"
+            android:layout_toRightOf="@+id/an_status_prompt" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/an_remind_at_row"
+        android:layout_width="match_parent"
+        android:layout_height="50dp" >
+
+        <TextView
+            android:id="@+id/an_remind_prompt"
+            android:layout_width="75dp"
+            android:layout_height="match_parent"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:text="Remind:"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="#FF33B5E5" />
+
+        <Button
+            android:id="@+id/an_remind_time_selector_button"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_toRightOf="@+id/an_remind_prompt"
+            android:text="11:07 AM on Sat, 7/26/14" />
+    </RelativeLayout>
+
+</LinearLayout>

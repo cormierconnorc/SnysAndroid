@@ -14,13 +14,14 @@ import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 
 
-public class MainActivity extends ActionBarActivity implements LoginTask.LoginCallback, OpenDbTask.DbCallback
+public class MainActivity extends ActionBarActivity implements LoginTask.LoginCallback, OpenDbTask.DbCallback, RefreshDataTask.Callback
 {
+	public static final String REFRESH_NETWORK_ON_START_KEY = "com.connorsapps.snys.MainActivity.refreshNetworkOnStart";
+	public static final String SHOW_NOTIFICATIONS_ON_START_KEY = "com.connorsapps.snys.MainActivity.showNotificationsOnStart";
 	public static long WAIT_TIME = 10;
 	private static NetworkManager netMan;
 	private static DatabaseClient db;
-//	private static List<Notification> uNoteCache, hNoteCache;
-//	private static List<Group> groupCache, inviteCache;
+	private boolean refreshNetworkOnStart, showNotificationsOnStart;
 	private ProgressFragment curProgFrag;
 	private NoteFragment noteFrag;
 	private GroupFragment groupFrag;
@@ -33,6 +34,12 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		//Just a fragment container
 		setContentView(R.layout.activity_main);
 		
+		//Get the argument passed to this activity: should the app sync on start?
+		//If not passed in (user started app manually), set to true.
+		this.refreshNetworkOnStart = this.getIntent().getBooleanExtra(REFRESH_NETWORK_ON_START_KEY, true);
+		//Show groups on start by default. Notifications if started from notification
+		this.showNotificationsOnStart = this.getIntent().getBooleanExtra(SHOW_NOTIFICATIONS_ON_START_KEY, false);
+		
 		//Set up dropdown navigation
 		setupDropdown();
 		
@@ -41,12 +48,6 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		//Create progress fragment which, unlike other fragments
 		//does not depend on having an open database
 		curProgFrag = new ProgressFragment();
-		
-//		//Create cache lists (used to minimize database reads)
-//		uNoteCache = new ArrayList<Notification>();
-//		hNoteCache = new ArrayList<Notification>();
-//		groupCache = new ArrayList<Group>();
-//		inviteCache = new ArrayList<Group>();
 		
 		//Open database in background
 		SnysDbHelper helper = new SnysDbHelper(this.getApplicationContext());
@@ -66,6 +67,9 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 				android.R.layout.simple_list_item_1, 
 				android.R.id.text1, 
 				options);
+		
+		//Set selected on start.
+		action.setSelectedNavigationItem(this.showNotificationsOnStart ? 1 : 0);
 		
 		//Set adapter and callback
 		action.setListNavigationCallbacks(ada, new ActionBar.OnNavigationListener(){
@@ -95,7 +99,6 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) 
 	{
-		//TODO add actions for other menu items
 		switch (item.getItemId())
 		{
 		case R.id.action_logout: 
@@ -108,7 +111,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			this.exitAll();
 			return true;
 		case R.id.action_refresh:
-			this.onSuccessfulLogin();
+			this.onRefresh();
 			return true;
 		}
 		
@@ -198,7 +201,9 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		//Fragments depend on open db, so only create them here
 		createFragments();
 		
-		tryLogin();
+		//Only do this if not started from notification:
+		if (this.refreshNetworkOnStart)
+			tryLogin();
 	}
 	
 	public void createFragments()
@@ -256,79 +261,24 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	public void onSuccessfulLogin()
 	{
 		//Task to load from server and then show
-		new AsyncTask<Void, Void, Boolean>()
+		new RefreshDataTask(this, netMan, db).execute();
+	}
+	
+	public void onSuccessfulRefresh()
+	{
+		showSelected();
+	}
+	
+	public void onUnsuccessfulRefresh(String error)
+	{
+		new GenericDialogFragment("Error loading data", error, android.R.drawable.ic_dialog_alert, null) 
 		{
-			private String error;
-			
 			@Override
-			protected Boolean doInBackground(Void... params)
+			public void onCancel(DialogInterface dial)
 			{
-				try
-				{
-					MainActivity.this.startProgress();
-					
-					//Get information off of server
-					NetworkManager.Information info = netMan.getInfo();
-					
-//					//Set up caches
-//					uNoteCache.addAll(info.pending);
-//					hNoteCache.addAll(info.handled);
-//					groupCache.addAll(info.memberships);
-//					inviteCache.addAll(info.invitations);
-					
-					//Clear out the old stuff (since this is a full update)
-					//This is inefficient, of course, but the server currently
-					//lacks the ability to send "update chunks" or some similar shit.
-					db.deleteGroups();
-					db.deleteNotifications();
-					
-					//Now put it into the database
-					//Note: ORDER DOES MATTER HERE. Memberships
-					//must be added before invitations to ensure
-					//that invitation to a group the user is already
-					//in are disregarded. This oddity is due to the
-					//difference in the way data is stored locally
-					//and on the server.
-					db.insertGroups(info.memberships);
-					db.insertInvitations(info.invitations);
-					db.insertNotifications(info.handled);
-					db.insertNotifications(info.pending);
-					
-					//Indicate success
-					return true;
-				}
-				catch (IOException e)
-				{
-					e.printStackTrace();
-					
-					return false;
-				}
+				showSelected();
 			}
-			
-			@Override
-			protected void onPostExecute(Boolean result)
-			{
-				MainActivity.this.endProgress();
-				
-				if (result)
-				{
-					showSelected();
-				}
-				else
-				{
-					new GenericDialogFragment("Error loading data", error, android.R.drawable.ic_dialog_alert, null) 
-					{
-						
-						@Override
-						public void onCancel(DialogInterface dial)
-						{
-							//Just load from database anyway
-							showSelected();
-						}
-					}.show(getSupportFragmentManager(), "BadLoad");
-				}
-			}
-		}.execute();
+		}.show(getSupportFragmentManager(), "BadLoad");
 	}
 	
 	/**
@@ -423,6 +373,43 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		}.execute();
 	}
 	
+	public void onRefresh()
+	{
+		//Custom callback to handle refreshes
+		RefreshDataTask.Callback callback = new RefreshDataTask.Callback()
+		{
+			
+			@Override
+			public void startProgress()
+			{
+				MainActivity.this.startProgress();
+			}
+			
+			@Override
+			public void endProgress()
+			{
+				MainActivity.this.endProgress();
+			}
+			
+			@Override
+			public void onUnsuccessfulRefresh(String error)
+			{
+				MainActivity.this.onUnsuccessfulRefresh(error);
+			}
+			
+			@Override
+			public void onSuccessfulRefresh()
+			{
+				MainActivity.this.onSuccessfulRefresh();
+				
+				//Now force the visible fragment to reload
+				refreshSelected();
+			}
+		};
+		
+		new RefreshDataTask(callback, netMan, db).execute();
+	}
+	
 	/**
 	 * Create a registration dialog for the user to interact with
 	 */
@@ -444,6 +431,20 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			break;
 		case 1:
 			showNotifications();
+			break;
+		}
+	}
+	
+	public void refreshSelected()
+	{
+		ActionBar action = this.getSupportActionBar();
+		switch (action.getSelectedNavigationIndex())
+		{
+		case 0:
+			groupFrag.loadData();
+			break;
+		case 1:
+			noteFrag.loadData();
 			break;
 		}
 	}
@@ -511,24 +512,4 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			e.printStackTrace();
 		}
 	}
-	
-//	public static List<Group> getGroupCache()
-//	{
-//		return groupCache;
-//	}
-//	
-//	public static List<Group> getInviteCache()
-//	{
-//		return inviteCache;
-//	}
-//	
-//	public static List<Notification> getPendingCache()
-//	{
-//		return uNoteCache;
-//	}
-//	
-//	public static List<Notification> getHandledCache()
-//	{
-//		return hNoteCache;
-//	}
 }

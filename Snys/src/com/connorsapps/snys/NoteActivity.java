@@ -23,7 +23,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-public class NoteActivity extends ActionBarActivity implements ProgressCallback
+public class NoteActivity extends ActionBarActivity implements ProgressCallback, DeleteNoteTask.Callback
 {
 	public static final String GROUP_KEY = "com.connorsapps.snys.NoteActivity.group";
 	public static final String NOTE_KEY = "com.connorsapps.snys.NoteActivity.note";
@@ -213,12 +213,7 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback
 		//not just handle notes.
 		this.timeButton.setEnabled(editMode);
 		this.noteText.setEnabled(editMode);
-		
-		//These should be handled differently
-		//this.statusSpinner.setEnabled(editMode);
-		//this.saveButton.setEnabled(editMode);
-		//this.remindAtTimeButton.setEnabled(editMode);
-		//this.saveRow.setVisibility(editMode ? View.VISIBLE : View.INVISIBLE);
+
 	}
 
 	@Override
@@ -416,58 +411,14 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback
 	public void deleteNote()
 	{		
 		//Thread to remove from server (and report error if necessary)
-		new AsyncTask<Void, Void, Boolean>()
-		{
-			private String error;
-			
-			@Override
-			protected void onPreExecute()
-			{
-				startProgress();
-			}
-			
-			@Override
-			protected Boolean doInBackground(Void... params)
-			{
-				try
-				{
-					netMan.deleteNote(group.getId(), note.getId());
-					//Only remove locally if it could be removed on server
-					//Allows us to keep the state consistent
-					db.deleteNotification(note.getId());
-					return true;
-				}
-				catch (IOException e)
-				{
-					e.printStackTrace();
-					error = "Could not connect to server to delete note.";
-				}
-				catch (SnysException e)
-				{
-					error = e.getMessage();
-				}
-				
-				return false;
-			}
-			
-			@Override
-			protected void onPostExecute(Boolean success)
-			{
-				endProgress();
-				
-				if (!success)
-				{
-					new GenericDialogFragment("Failed to delete note", error, android.R.drawable.ic_dialog_alert, null)
-							.show(getSupportFragmentManager(), "BadError");
-				}
-				else
-				{
-					//Finish the activity if we deleted it successfully.
-					NoteActivity.this.finish();
-				}
-			}
-			
-		}.execute();
+		new DeleteNoteTask(this, netMan, db, getSupportFragmentManager(), group, note).execute();
+	}
+	
+	@Override
+	public void onNoteDeleted()
+	{
+		//Exit on note deleted
+		this.finish();
 	}
 
 	@Override
