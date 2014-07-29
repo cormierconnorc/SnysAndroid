@@ -1,7 +1,9 @@
 package com.connorsapps.snys;
 
 import java.io.IOException;
+import java.util.List;
 
+import android.content.Context;
 import android.os.AsyncTask;
 
 public class RefreshDataTask extends AsyncTask<Void, Void, Boolean>
@@ -32,11 +34,16 @@ public class RefreshDataTask extends AsyncTask<Void, Void, Boolean>
 			//Get information off of server
 			NetworkManager.Information info = netMan.getInfo();
 			
-			//Clear out the old stuff (since this is a full update)
-			//This is inefficient, of course, but the server currently
-			//lacks the ability to send "update chunks" or some similar shit.
-			db.deleteGroups();
-			db.deleteNotifications();
+			//Get old handled note list
+			List<Notification> lameDuckNotes = db.getHandledNotifications();
+			//Remove all notifications that are still handled
+			lameDuckNotes.removeAll(info.handled);
+			
+			//Now remove the alarms associated with the remaining notifications (which no longer exist)
+			AlarmService.removeAlarms(callback.getContext(), lameDuckNotes);
+			
+			//Add new alarms
+			AlarmService.addAlarms(callback.getContext(), info.handled, info.memberships);
 			
 			//Now put it into the database
 			//Note: ORDER DOES MATTER HERE. Memberships
@@ -45,10 +52,13 @@ public class RefreshDataTask extends AsyncTask<Void, Void, Boolean>
 			//in are disregarded. This oddity is due to the
 			//difference in the way data is stored locally
 			//and on the server.
-			db.insertGroups(info.memberships);
-			db.insertInvitations(info.invitations);
-			db.insertNotifications(info.handled);
-			db.insertNotifications(info.pending);
+			
+			//To this end, append invitations to memberships and pending to handled
+			info.memberships.addAll(info.invitations);
+			info.handled.addAll(info.pending);
+			
+			db.updateGroups(info.memberships);
+			db.updateNotifications(info.handled);
 			
 			//Indicate success
 			return true;
@@ -56,6 +66,8 @@ public class RefreshDataTask extends AsyncTask<Void, Void, Boolean>
 		catch (IOException e)
 		{
 			e.printStackTrace();
+			
+			error = "Could not reach server!";
 			
 			return false;
 		}
@@ -74,6 +86,7 @@ public class RefreshDataTask extends AsyncTask<Void, Void, Boolean>
 	
 	public static interface Callback extends ProgressCallback
 	{
+		public Context getContext();
 		public void onSuccessfulRefresh();
 		public void onUnsuccessfulRefresh(String error);
 	}

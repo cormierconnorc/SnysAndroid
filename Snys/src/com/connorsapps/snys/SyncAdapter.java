@@ -77,10 +77,12 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements RefreshD
 	@Override
 	public void onSuccessfulRefresh()
 	{
-		// TODO Create notification for pending notifications
 		Log.d("devBug", "Successful background sync.");
 		
-		List<Notification> pending = db.getUnhandledNotifications();
+		//Get new unhandled notifications and add to database so they don't show up again
+		List<Notification> pending = db.getNewUnhandledNotifications();
+		
+		Log.d("devBug", "Prompting for " + pending.size() + " new notes.");
 		
 		if (pending.size() != 0)
 			createPendingNotification(pending);
@@ -97,9 +99,10 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements RefreshD
 	{
 		NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
 		
-		builder.setContentTitle(String.valueOf(pending.size()) + " pending Snys notifications.");
+		builder.setContentTitle(String.valueOf(pending.size()) + " pending Snys notification" + (pending.size() == 1 ? "." : "s."));
 		builder.setSmallIcon(R.drawable.ic_launcher);
 		builder.setContentText("Click here to handle.");
+		builder.setAutoCancel(true);
 		
 		Intent openAct = new Intent(getContext(), MainActivity.class);
 		openAct.putExtra(MainActivity.REFRESH_NETWORK_ON_START_KEY, false);

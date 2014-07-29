@@ -6,11 +6,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.connorsapps.snys.SnysContract.Account;
 import com.connorsapps.snys.SnysContract.Groups;
+import com.connorsapps.snys.SnysContract.NewLog;
 import com.connorsapps.snys.SnysContract.Notifications;
 
 public class SnysDbHelper extends SQLiteOpenHelper
 {
-	public static final int DATABASE_VERSION = 2;
+	public static final int DATABASE_VERSION = 3;
 	public static final String DATABASE_NAME = "Snys.db";
 	
 	private static final String CREATE_TABLE_ACCOUNT = 
@@ -38,11 +39,19 @@ public class SnysDbHelper extends SQLiteOpenHelper
 			Groups.TABLE_NAME + "(" + Groups._ID + ") ON DELETE CASCADE " +
 			" ON UPDATE CASCADE )";
 	
+	private static final String CREATE_TABLE_NEWLOG =
+			"CREATE TABLE " + NewLog.TABLE_NAME + " (" +
+			NewLog.COLUMN_NID + " INTEGER PRIMARY KEY ON CONFLICT IGNORE," +
+			"FOREIGN KEY (" + NewLog.COLUMN_NID + ") REFERENCES " +
+			Notifications.TABLE_NAME + "(" + Notifications._ID +") ON DELETE CASCADE " +
+			" ON UPDATE CASCADE )";
+	
 	private static final String DROP_TABLE = "DROP TABLE IF EXISTS ";
 	
 	private static final String DROP_TABLE_ACCOUNT = DROP_TABLE + Account.TABLE_NAME;
 	private static final String DROP_TABLE_GROUPS = DROP_TABLE + Groups.TABLE_NAME;
 	private static final String DROP_TABLE_NOTIFICATIONS = DROP_TABLE + Notifications.TABLE_NAME;
+	private static final String DROP_TABLE_NEWLOG = DROP_TABLE + NewLog.TABLE_NAME;
 	
 	public SnysDbHelper(Context context)
 	{
@@ -55,6 +64,7 @@ public class SnysDbHelper extends SQLiteOpenHelper
 		db.execSQL(CREATE_TABLE_ACCOUNT);
 		db.execSQL(CREATE_TABLE_GROUPS);
 		db.execSQL(CREATE_TABLE_NOTIFICATIONS);
+		db.execSQL(CREATE_TABLE_NEWLOG);
 	}
 
 	@Override
@@ -63,6 +73,7 @@ public class SnysDbHelper extends SQLiteOpenHelper
 		db.execSQL(DROP_TABLE_ACCOUNT);
 		db.execSQL(DROP_TABLE_GROUPS);
 		db.execSQL(DROP_TABLE_NOTIFICATIONS);
+		db.execSQL(DROP_TABLE_NEWLOG);
 		
 		onCreate(db);
 	}

@@ -369,6 +369,9 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback,
 						updated.getTime(), 
 						updated.getServerStatus(), 
 						updated.getRemindAt());
+					
+					//Add alarm for notification
+					AlarmService.addAlarm(getApplicationContext(), updated, group);
 				}
 				
 				//Now insert (with a proper nid)
@@ -381,6 +384,9 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback,
 				//Will not persist if subsequent operations fail.
 				//Only if not on initial submit, handle differently otherwise
 				db.insertNotification(updated);
+				
+				//Add alarm for notification (removes if wrong type)
+				AlarmService.addAlarm(getApplicationContext(), updated, group);
 				
 				//First, handle note on server (if status changed, only)
 				if ((updated.getStatus() != note.getStatus() || 

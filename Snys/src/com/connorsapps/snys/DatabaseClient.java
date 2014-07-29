@@ -10,6 +10,7 @@ import android.database.sqlite.SQLiteDatabase;
 
 import com.connorsapps.snys.SnysContract.Account;
 import com.connorsapps.snys.SnysContract.Groups;
+import com.connorsapps.snys.SnysContract.NewLog;
 import com.connorsapps.snys.SnysContract.Notifications;
 
 /**
@@ -24,7 +25,8 @@ public class DatabaseClient
 	private static final String[] ACCOUNT_PROJECTION = {Account.COLUMN_EMAIL, Account.COLUMN_PASS},
 			GROUPS_PROJECTION = {Groups._ID, Groups.COLUMN_GROUPNAME, Groups.COLUMN_PERMISSIONS, Groups.COLUMN_IS_INVITATION},
 			NOTIFICATIONS_PROJECTION = {Notifications._ID, Notifications.COLUMN_GID, Notifications.COLUMN_TEXT,
-				Notifications.COLUMN_TIME, Notifications.COLUMN_STATUS, Notifications.COLUMN_REMINDAT};
+				Notifications.COLUMN_TIME, Notifications.COLUMN_STATUS, Notifications.COLUMN_REMINDAT},
+			NEWLOG_PROJECTION = {NewLog.COLUMN_NID};
 	
 	/**
 	 * Set database and use default showHidden value (false)
@@ -120,6 +122,45 @@ public class DatabaseClient
 			
 			//Insert and replace if gid exists
 			db.insertWithOnConflict(Groups.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+		}
+		
+		db.setTransactionSuccessful();
+		db.endTransaction();
+	}
+	
+	/**
+	 * Update the group list and remove ones that are no longer present.
+	 * MUST be done all at once (no separate queries for pending and handled)
+	 * @param newGroups
+	 */
+	public void updateGroups(List<Group> newGroups)
+	{
+		db.beginTransaction();
+		
+		for (Group group : newGroups)
+		{
+			ContentValues values = new ContentValues();
+			values.put(Groups._ID, group.getId());
+			values.put(Groups.COLUMN_GROUPNAME, group.getGroupname());
+			values.put(Groups.COLUMN_PERMISSIONS, group.getPermissions().toString());
+			values.put(Groups.COLUMN_IS_INVITATION, (group.isInvitation() ? 1 : 0));
+			
+			//Insert and replace if gid exists
+			db.insertWithOnConflict(Groups.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+		}
+		
+		//Clear out the old
+		if (newGroups.size() > 0)
+		{
+			//Holder for new id's
+			String[] groupIds = new String[newGroups.size()];
+			
+			int i = 0;
+			for (Group group : newGroups)
+				groupIds[i++] = String.valueOf(group.getId());
+		
+			//Now remove all those that were not in the previous list
+			db.delete(Groups.TABLE_NAME, Groups._ID + " NOT IN (" + genPlaceholders(newGroups.size()) + ")", groupIds);
 		}
 		
 		db.setTransactionSuccessful();
@@ -288,11 +329,75 @@ public class DatabaseClient
 	}
 	
 	/**
+	 * Insert new notifications and remove all old ones
+	 * @param newNotes
+	 */
+	public void updateNotifications(List<Notification> newNotes)
+	{
+		db.beginTransaction();
+		
+		for (Notification note : newNotes)
+		{
+			ContentValues values = new ContentValues();
+			values.put(Notifications._ID, note.getId());
+			values.put(Notifications.COLUMN_GID, note.getGid());
+			values.put(Notifications.COLUMN_TEXT, note.getText());
+			values.put(Notifications.COLUMN_TIME, note.getTime());
+			values.put(Notifications.COLUMN_STATUS, note.getStatus().toString());
+			values.put(Notifications.COLUMN_REMINDAT, note.getRemindAt());
+			
+			//Insert and replace if gid exists
+			db.insertWithOnConflict(Notifications.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+		}
+		
+		//Clear out the old
+		if (newNotes.size() > 0)
+		{
+			//Holder for new id's
+			String[] noteIds = new String[newNotes.size()];
+			
+			int i = 0;
+			for (Notification note : newNotes)
+				noteIds[i++] = String.valueOf(note.getId());
+		
+			//Now remove all those that were not in the previous list
+			db.delete(Notifications.TABLE_NAME, Notifications._ID + " NOT IN (" + genPlaceholders(newNotes.size()) + ")", noteIds);
+		}
+		
+		db.setTransactionSuccessful();
+		db.endTransaction();
+	}
+	
+	private String genPlaceholders(int num)
+	{
+		StringBuilder buildy = new StringBuilder(num * 2 - 1);
+		
+		for (int i = 0; i < num; i++)
+		{
+			buildy.append("?");
+			
+			if (i != num - 1)
+				buildy.append(",");
+		}
+		
+		return buildy.toString();
+	}
+	
+	/**
 	 * Insert a single notification into the database
 	 * @param note
 	 */
 	public void insertNotification(Notification note)
 	{
+		//If unhandled, make sure the background thread doesn't prompt us for it by inserting a NewLog entry
+		if (note.getStatus() == Notification.Status.UNHANDLED)
+		{
+			ContentValues values = new ContentValues();
+			values.put(NewLog.COLUMN_NID, note.getId());
+			
+			db.insert(NewLog.TABLE_NAME, null, values);
+		}
+		
 		this.insertNotifications(Collections.singletonList(note));
 	}
 	
@@ -329,6 +434,65 @@ public class DatabaseClient
 		String[] args = (showHidden ? null : new String[] {Notification.Status.HIDE.toString()});
 		
 		return getNotifications(selection, args);
+	}
+	
+	private void insertNewLogEntries(List<Notification> notes)
+	{
+		db.beginTransaction();
+		
+		//And insert the nid's of these new notifications into the NewLog table so they won't be shown again
+		for (Notification note : notes)
+		{
+			ContentValues values = new ContentValues();
+			values.put(NewLog.COLUMN_NID, note.getId());
+			
+			db.insert(NewLog.TABLE_NAME, null, values);
+		}
+		
+		db.setTransactionSuccessful();
+		db.endTransaction();
+	}
+	
+	/**
+	 * Get the unhandled notifications that the app has not yet prompted for.
+	 * @return
+	 */
+	public List<Notification> getNewUnhandledNotifications()
+	{
+		//The nids to not include
+		Cursor nids = db.query(NewLog.TABLE_NAME, NEWLOG_PROJECTION, null, null, null, null, null);
+		
+		int count = nids.getCount();
+		
+		//Just do the standard return if no handled nids
+		if (count == 0)
+		{
+			List<Notification> notes = getUnhandledNotifications();
+			insertNewLogEntries(notes);
+			return notes;
+		}
+		
+		String where = Notifications.COLUMN_STATUS + " = ? AND " + Notifications._ID + " NOT IN (" + 
+					genPlaceholders(count) + ")";
+		String[] args = new String[count + 1];
+		
+		int i = 0;
+		
+		args[i++] = Notification.Status.UNHANDLED.toString();
+		
+		nids.moveToFirst();
+		
+		do
+		{
+			args[i++] = String.valueOf(nids.getInt(nids.getColumnIndexOrThrow(NewLog.COLUMN_NID)));
+		} while (nids.moveToNext());
+		
+		//Now query
+		List<Notification> notes = getNotifications(where, args);
+		
+		insertNewLogEntries(notes);
+		
+		return notes;
 	}
 	
 	/**

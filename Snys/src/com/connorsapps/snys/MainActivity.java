@@ -5,15 +5,16 @@ import java.util.List;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
@@ -28,13 +29,14 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	public static String ACCOUNT = "dummyaccount";
 	public static long SYNC_REFRESH_PERIOD = 60; //30 * 60;	//Sync in background every 30 minutes.
 	public static long WAIT_TIME = 10;
+	private static Account account;
 	private static NetworkManager netMan;
 	private static DatabaseClient db;
 	private boolean refreshNetworkOnStart, showNotificationsOnStart;
 	private ProgressFragment curProgFrag;
 	private NoteFragment noteFrag;
 	private GroupFragment groupFrag;
-	private Account account;
+	private MenuItem toggleOnBoot;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -64,21 +66,20 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		OpenDbTask opener = new OpenDbTask(this);
 		opener.execute(helper);
 		
+		startSyncAdapter(this);
+	}
+	
+	public static void startSyncAdapter(Context cont)
+	{
 		//Set up the SyncAdapter
-		account = createSyncAccount(this);
-		
-//		Bundle b = new Bundle();
-//		b.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
-//		b.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
-		
+		account = createSyncAccount(cont);
+
 		ContentResolver.setIsSyncable(account, AUTHORITY, 1);
 		ContentResolver.setSyncAutomatically(account, AUTHORITY, true);
-		//Immediate sync
-//		ContentResolver.requestSync(account, AUTHORITY, b);
-		
-		
-		//Now start it
-		ContentResolver.addPeriodicSync(account, AUTHORITY, Bundle.EMPTY, SYNC_REFRESH_PERIOD);
+
+		// Now start it
+		ContentResolver.addPeriodicSync(account, AUTHORITY, Bundle.EMPTY,
+				SYNC_REFRESH_PERIOD);
 	}
 	
 	public static Account createSyncAccount(Context context)
@@ -133,6 +134,11 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 	{
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
+		
+		toggleOnBoot = menu.findItem(R.id.action_toggle_start_on_boot);
+		
+		this.setBootItemText();
+		
 		return true;
 	}
 
@@ -149,6 +155,9 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			return true;
 		case R.id.action_quit:
 			this.exitAll();
+			return true;
+		case R.id.action_toggle_start_on_boot:
+			this.toggleStartOnBoot();
 			return true;
 		case R.id.action_refresh:
 			this.onRefresh();
@@ -195,6 +204,52 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		
 		//Shut down activity
 		this.finish();
+	}
+	
+	private boolean isOnBootEnabled()
+	{
+		ComponentName receiver = new ComponentName(this, BootReceiver.class);
+		PackageManager pm = this.getPackageManager();
+		
+		return isEnabled(receiver, pm);
+	}
+	
+	private boolean isEnabled(ComponentName receiver, PackageManager pm)
+	{
+		int isEnabled = pm.getComponentEnabledSetting(receiver);
+		
+		return isEnabled == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+	}
+	
+	/**
+	 * Toggle boot receiver enabled
+	 * @param item
+	 */
+	public void toggleStartOnBoot()
+	{
+		ComponentName receiver = new ComponentName(this, BootReceiver.class);
+		PackageManager pm = this.getPackageManager();
+		
+		boolean enabled = isEnabled(receiver, pm);
+
+		pm.setComponentEnabledSetting(receiver, 
+				(enabled ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED : PackageManager.COMPONENT_ENABLED_STATE_ENABLED), 
+				PackageManager.DONT_KILL_APP);
+		
+		setBootItemText(!enabled);
+	}
+	
+	private void setBootItemText()
+	{
+		this.setBootItemText(isOnBootEnabled());
+	}
+	
+	private void setBootItemText(boolean isOnBootEnabled)
+	{
+		if (isOnBootEnabled)
+			toggleOnBoot.setTitle("Disable sync on boot");
+		else
+			toggleOnBoot.setTitle("Enable sync on boot");
 	}
 	
 	/**
@@ -250,14 +305,22 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		else
 		{
 			//Set network manager credentials from db and move on
-			new Thread(new Runnable() 
+			new AsyncTask<Void, Void, Void>()
 			{
 				@Override
-				public void run()
+				protected Void doInBackground(Void... unused)
 				{
 					netMan.setCredentials(MainActivity.db.getCredentials());
+					
+					return null;
 				}
-			}).start();
+				
+				@Override
+				protected void onPostExecute(Void res)
+				{
+					onRefresh();
+				}
+			}.execute();
 		}
 	}
 	
@@ -334,7 +397,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 			@Override
 			public void onCancel(DialogInterface dial)
 			{
-				showSelected();
+				onSuccessfulRefresh();
 			}
 		}.show(getSupportFragmentManager(), "BadLoad");
 	}
@@ -537,5 +600,11 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		{
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public Context getContext()
+	{
+		return this.getApplicationContext();
 	}
 }

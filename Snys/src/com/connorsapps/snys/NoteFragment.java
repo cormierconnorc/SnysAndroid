@@ -78,12 +78,15 @@ public class NoteFragment extends Fragment implements ProgressCallback, DeleteNo
 	public void onStart()
 	{
 		super.onStart();
-		
+	
 		loadData();
 	}
 	
 	public void loadData()
 	{
+		if (db == null)
+			return;
+		
 		//Start data loading (now in onStart so data is refreshed each time fragment shows)
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
@@ -189,6 +192,10 @@ public class NoteFragment extends Fragment implements ProgressCallback, DeleteNo
 				{
 					//Put notification in database first so updates persist locally.
 					db.insertNotification(n);
+					
+					//Update the alarm
+					AlarmService.addAlarm(getActivity().getApplicationContext(), n, groupsMap.get(n.getGid()));
+					
 					//Now update on server
 					nm.handleNote(n.getId(), n.getServerStatus(), n.getRemindAt());
 					

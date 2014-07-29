@@ -22,6 +22,12 @@
         app:showAsAction="never"/>
     
     <item
+        android:id="@+id/action_toggle_start_on_boot"
+        android:orderInCategory="350"
+        android:title="Sync on boot"
+        app:showAsAction="never"/>
+    
+    <item
         android:id="@+id/action_quit"
         android:orderInCategory="400"
         android:title="Quit"

@@ -146,4 +146,12 @@ public class Group implements Parcelable
 	{
 		return "Group {id = " + id + ", groupname = \"" + groupname + "\", permissions = " + permissions + "}";
 	}
+	
+	/**
+	 * Determine equality solely by id
+	 */
+	public boolean equals(Object other)
+	{
+		return other instanceof Group && this.id == ((Group)other).id;
+	}
 }

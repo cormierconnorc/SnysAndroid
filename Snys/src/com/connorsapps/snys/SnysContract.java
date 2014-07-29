@@ -36,5 +36,11 @@ public final class SnysContract
 		public static final String COLUMN_STATUS = "Status";
 		public static final String COLUMN_REMINDAT = "RemindAt";
 	}
+	
+	public static abstract class NewLog implements BaseColumns
+	{
+		public static final String TABLE_NAME = "NewLog";
+		public static final String COLUMN_NID = "Nid";
+	}
 
 }

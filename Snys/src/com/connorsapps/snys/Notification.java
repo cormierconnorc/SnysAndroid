@@ -149,7 +149,7 @@ public class Notification implements Parcelable
 	
 	public static String getFormattedTime(long time, boolean longFormat)
 	{
-		String format = (longFormat ? "h:mm:ss a 'on' EEE, M/dd/yyyy" : "h:mm a 'on' M/dd/yyyy");
+		String format = (longFormat ? "h:mm a 'on' EEE, M/dd/yyyy" : "h:mm a 'on' M/dd/yyyy");
 		return new SimpleDateFormat(format, Locale.getDefault()).format(new Date(time));
 	}
 	
@@ -160,7 +160,7 @@ public class Notification implements Parcelable
 	
 	public static long fromFormattedTime(String time, boolean longFormat)
 	{
-		String format = (longFormat ? "h:mm:ss a 'on' EEE, M/dd/yyyy" : "h:mm a 'on' M/dd/yyyy");
+		String format = (longFormat ? "h:mm a 'on' EEE, M/dd/yyyy" : "h:mm a 'on' M/dd/yyyy");
 		
 		try
 		{
@@ -229,5 +229,13 @@ public class Notification implements Parcelable
 	public String toString()
 	{
 		return "Notification {id = " + id + ", gid = " + gid + ", text = \"" + text + "\", time = " + time + ", status = " + status + ", remindAt = " + remindAt + "}";
+	}
+	
+	/**
+	 * Determine equality solely by id
+	 */
+	public boolean equals(Object other)
+	{
+		return other instanceof Notification && this.id == ((Notification)other).id;
 	}
 }

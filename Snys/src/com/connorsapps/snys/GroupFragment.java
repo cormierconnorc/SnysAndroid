@@ -45,14 +45,14 @@ public class GroupFragment extends Fragment implements ProgressCallback, CreateG
 		myList = (ListView)root.findViewById(R.id.sexy_group_view);
 		
 		setupTouch(myList);
-	
+		
+		utils = new GroupUtils(this, getActivity().getSupportFragmentManager());
+		
 		//Open the database
 		db = MainActivity.getDatabase();
 		
 		//And create the network manager
 		netMan = MainActivity.getNetworkManager();
-		
-		utils = new GroupUtils(this, getActivity().getSupportFragmentManager());
 		
 		return root;
 	}
@@ -86,6 +86,10 @@ public class GroupFragment extends Fragment implements ProgressCallback, CreateG
 	
 	public void loadData()
 	{
+		//Do not populate view if database is null
+		if (db == null)
+			return;
+		
 		LoadDataTask task = new LoadDataTask();
 		task.execute();
 	}
