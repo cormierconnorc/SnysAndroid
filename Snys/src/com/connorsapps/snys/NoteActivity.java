@@ -430,13 +430,19 @@ public class NoteActivity extends ActionBarActivity implements ProgressCallback,
 	@Override
 	public void startProgress()
 	{
-		this.setProgressBarIndeterminate(true);
+		this.setProgressBarIndeterminateVisibility(true);
+		
+		//Disable the save button
+		saveButton.setEnabled(false);
 	}
 
 	@Override
 	public void endProgress()
 	{
-		this.setProgressBarIndeterminate(false);
+		this.setProgressBarIndeterminateVisibility(false);
+		
+		//Reenable the save button
+		saveButton.setEnabled(true);
 	}
 	
 	/**
