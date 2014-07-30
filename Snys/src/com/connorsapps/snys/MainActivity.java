@@ -55,7 +55,7 @@ public class MainActivity extends ActionBarActivity implements LoginTask.LoginCa
 		//Set up dropdown navigation
 		setupDropdown();
 		
-		netMan = new NetworkManager();
+		netMan = new NetworkManager(getApplicationContext());
 		
 		//Create progress fragment which, unlike other fragments
 		//does not depend on having an open database

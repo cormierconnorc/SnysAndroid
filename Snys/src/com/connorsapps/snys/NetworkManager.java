@@ -1,18 +1,26 @@
 package com.connorsapps.snys;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
+import android.content.Context;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -24,8 +32,9 @@ import com.google.gson.JsonSyntaxException;
 
 public class NetworkManager
 {
-	//Temporary local address of server on my network. You'll need to change this.
-	public static final String SERVER = "http://192.168.1.10:8005";
+	//Address of https server
+	public static final String SERVER = "https://raspbi.mooo.com:8006";
+	private SSLContext context;
 	private Credentials credentials;
 	private Gson gson;
 	
@@ -34,25 +43,67 @@ public class NetworkManager
 	 * Must set credentials prior to attempting
 	 * verified requests
 	 */
-	public NetworkManager()
+	public NetworkManager(Context context)
 	{
-		this(null);
+		this(context, null);
 	}
 	
 	/**
 	 * Create manager with credentials
 	 * @param cred
 	 */
-	public NetworkManager(Credentials cred)
+	public NetworkManager(Context context, Credentials cred)
 	{
 		this.setCredentials(cred);
 		this.gson = new Gson();
+		
+		try
+		{
+			initializeContext(context);
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
 	}	
+	
+	/**
+	 * Create the SSLContext needed to communicate with our server
+	 * @param context the context to use to get the certificate
+	 * @throws Exception Horrible practice, I know. There are a multitude
+	 * of exceptions that all need to be handled in the same way, though
+	 * (if any of them occur, the app will fail to communicate with the 
+	 * server, anyway)
+	 */
+	private void initializeContext(Context context) throws Exception 
+	{
+		CertificateFactory facty = CertificateFactory.getInstance("X.509");
+		
+		InputStream certy = new BufferedInputStream(context.getAssets().open("ssl.crt"));
+		
+		Certificate ca = facty.generateCertificate(certy);
+		
+		//Create keystore
+		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+		keyStore.load(null, null);
+		keyStore.setCertificateEntry("ca", ca);
+		
+		//TrustManager
+		TrustManagerFactory overEngineered = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+		overEngineered.init(keyStore);
+		
+		//Set the context
+		this.context = SSLContext.getInstance("TLS");
+		this.context.init(null, overEngineered.getTrustManagers(), null);
+	}
 	
 	public String doGet(String endpoint, String params) throws IOException
 	{
 		URL url = new URL(SERVER + endpoint + "?" + params);
-		return readInputStream(url.openStream());
+		
+		HttpsURLConnection con = (HttpsURLConnection)url.openConnection();
+		con.setSSLSocketFactory(context.getSocketFactory());
+		return readInputStream(con.getInputStream());
 	}
 	
 	public String doPost(String endpoint, String params) throws IOException
@@ -61,7 +112,8 @@ public class NetworkManager
 		
 //		Log.d("devBug", "Posting to " + url.toString() + " with params " + params);
 		
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+		con.setSSLSocketFactory(context.getSocketFactory());
 		con.setRequestMethod("POST");
 		con.setDoOutput(true);
 		con.setUseCaches(false);

@@ -38,7 +38,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements RefreshD
 	{
 		Log.d("devBug", "Initializing syncer");
 		db = new DatabaseClient(new SnysDbHelper(getContext()).getWritableDatabase());
-		netMan = new NetworkManager();
+		netMan = new NetworkManager(getContext());
 		noteMan = (NotificationManager)getContext().getSystemService(Context.NOTIFICATION_SERVICE);
 	}
 	
